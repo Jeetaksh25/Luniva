@@ -22,7 +22,7 @@ import { useColorScheme } from "react-native";
 interface CustomInputProps {
   title: string;
   icon?: React.ReactNode;
-  handleOncChangeText?: (text: string) => void;
+  handleOnChangeText?: (text: string) => void;
   containerStyles?: StyleProp<ViewStyle>;
   textStyles?: StyleProp<TextStyle>;
 }
@@ -30,7 +30,7 @@ interface CustomInputProps {
 const CustomInput: FC<CustomInputProps> = ({
   title,
   icon,
-  handleOncChangeText,
+  handleOnChangeText,
   containerStyles,
   textStyles,
 }) => {
@@ -60,7 +60,7 @@ const CustomInput: FC<CustomInputProps> = ({
           placeholder={title}
           keyboardType={title === "Email" ? "email-address" : "default"}
           secureTextEntry={title === "Password"}
-          onChangeText={handleOncChangeText}
+          onChangeText={handleOnChangeText}
           style={[
             {
               flex: 1,

@@ -11,10 +11,12 @@ import {
 import AntDesign from "@expo/vector-icons/AntDesign";
 import Entypo from "@expo/vector-icons/Entypo";
 import FontAwesome5 from "@expo/vector-icons/FontAwesome5";
-
 import * as Haptics from "expo-haptics";
 import CustomInput from "@/comps/CustomInput";
 import CustomButton from "@/comps/CustomButton";
+import { useStore } from "@/store/useAppStore";
+import { useState, useEffect } from "react";
+import { StatusBar } from "expo-status-bar";
 
 export default function SignIn() {
   const colorScheme = useColorScheme();
@@ -22,8 +24,23 @@ export default function SignIn() {
     colorScheme === "dark" ? theme.darkTheme : theme.lightTheme;
   const router = useRouter();
 
-  const handleLogin = () => {
-    router.replace("/chat");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const { login, loading, user } = useStore();
+
+  useEffect(() => {
+    if (user) {
+      router.replace("/chat");
+    }
+  }, [user]);
+
+  const handleLogin = async () => {
+    try {
+      await login(email, password);
+    } catch (error) {
+      console.log("Login error:", error);
+    }
   };
 
   return (
@@ -31,6 +48,7 @@ export default function SignIn() {
       style={[styles.container, { backgroundColor: themeColors.background }]}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <StatusBar style="light" />
         <View style={styles.innerContainer}>
           <Text style={[styles.text, { color: themeColors.primaryText }]}>
             Welcome Back!
@@ -52,6 +70,7 @@ export default function SignIn() {
                   color={theme.colors.secondaryColor}
                 />
               }
+              handleOnChangeText={setEmail}
             />
             <CustomInput
               title="Password"
@@ -62,6 +81,7 @@ export default function SignIn() {
                   color={theme.colors.secondaryColor}
                 />
               }
+              handleOnChangeText={setPassword}
             />
           </View>
 
@@ -69,6 +89,8 @@ export default function SignIn() {
             title="Login"
             handlePress={handleLogin}
             containerStyles={{ width: "100%", marginTop: theme.margin.lg }}
+            isLoading={loading}
+            loadingText="Signing In..."
           />
 
           <View

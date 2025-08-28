@@ -4,7 +4,7 @@ import { Stack } from "expo-router";
 const TabsLayout = () => {
   return (
     <>
-      <StatusBar backgroundColor="#161622" style="light" />
+      <StatusBar style="light" />
       <Stack>
         <Stack.Screen name="chat" options={{ headerShown: false }} />
       </Stack>

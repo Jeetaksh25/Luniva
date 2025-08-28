@@ -37,7 +37,7 @@ const Chat = () => {
     <KeyboardAvoidingView
       style={{ flex: 1 }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
-      keyboardVerticalOffset={keyboardVisible ? 40 : 0}
+      keyboardVerticalOffset={keyboardVisible ? 0 : -40}
     >
       <View style={styles.container}>
         {/* Chat List */}

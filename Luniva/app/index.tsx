@@ -17,11 +17,21 @@ import { useColorScheme } from "react-native";
 
 import * as Haptics from "expo-haptics";
 
+import { useStore } from "@/store/useAppStore";
+
+import { StatusBar } from "expo-status-bar";
+
 export default function FirstScreen() {
   const colorScheme = useColorScheme();
   const themeColors =
     colorScheme === "dark" ? theme.darkTheme : theme.lightTheme;
   const router = useRouter();
+
+  const { user, initAuth, loadingAuth } = useStore();
+
+  useEffect(() => {
+    initAuth();
+  }, []);
 
   const [currentEmoji, setCurrentEmoji] = useState("😀");
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -36,7 +46,6 @@ export default function FirstScreen() {
       easing: Easing.out(Easing.ease),
       useNativeDriver: true,
     }).start(() => {
-      // Change emoji only after fade-out
       onChangeEmoji();
 
       Animated.timing(fadeAnim, {
@@ -99,11 +108,16 @@ export default function FirstScreen() {
     router.push("/signin");
   };
 
+  if (user) {
+    return <Redirect href="/chat" />;
+  }
+
   return (
     <SafeAreaView
       style={[styles.container, { backgroundColor: themeColors.background }]}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <StatusBar style="light" />
         <View style={styles.innerContainer}>
           <Animated.Text
             style={[styles.emoji, { opacity: fadeAnim }]}
@@ -123,7 +137,7 @@ export default function FirstScreen() {
           >
             Your Friend to take care of your mental health and well-being.
           </Text>
-          <CustomButton title="Get Started" handlePress={handleGetStarted} />
+          <CustomButton title="Get Started" handlePress={handleGetStarted} isLoading={loadingAuth} loadingText={"Loading"} />
         </View>
       </ScrollView>
     </SafeAreaView>

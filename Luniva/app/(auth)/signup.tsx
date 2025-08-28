@@ -16,14 +16,35 @@ import * as Haptics from "expo-haptics";
 import CustomInput from "@/comps/CustomInput";
 import CustomButton from "@/comps/CustomButton";
 
+import { useStore } from "@/store/useAppStore";
+
+import { useState, useEffect } from "react";
+import { StatusBar } from "expo-status-bar";
+
 export default function SignUp() {
   const colorScheme = useColorScheme();
   const themeColors =
     colorScheme === "dark" ? theme.darkTheme : theme.lightTheme;
   const router = useRouter();
 
-  const handleSignUP = () => {
-    router.replace("/chat");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const { signup, loading, user } = useStore();
+
+  useEffect(() => {
+    if (user) {
+      router.replace("/chat");
+    }
+  }, [user]);
+
+  const handleSignUP = async () => {
+    try {
+      await signup(email, password, username);
+    } catch (error) {
+      console.log("Signup error:", error);
+    }
   };
 
   return (
@@ -31,6 +52,7 @@ export default function SignUp() {
       style={[styles.container, { backgroundColor: themeColors.background }]}
     >
       <ScrollView contentContainerStyle={styles.scrollContainer}>
+        <StatusBar style="light" />
         <View style={styles.innerContainer}>
           <Text style={[styles.text, { color: themeColors.primaryText }]}>
             Create Account
@@ -52,6 +74,7 @@ export default function SignUp() {
                   color={theme.colors.secondaryColor}
                 />
               }
+              handleOnChangeText={setUsername}
             />
             <CustomInput
               title="Email"
@@ -62,6 +85,7 @@ export default function SignUp() {
                   color={theme.colors.secondaryColor}
                 />
               }
+              handleOnChangeText={setEmail}
             />
             <CustomInput
               title="Password"
@@ -72,6 +96,7 @@ export default function SignUp() {
                   color={theme.colors.secondaryColor}
                 />
               }
+              handleOnChangeText={setPassword}
             />
           </View>
 
@@ -79,6 +104,8 @@ export default function SignUp() {
             title="Sign Up"
             handlePress={handleSignUP}
             containerStyles={{ width: "100%", marginTop: theme.margin.lg }}
+            isLoading={loading}
+            loadingText="Signing Up..."
           />
 
           <View
