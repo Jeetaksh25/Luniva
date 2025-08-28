@@ -17,8 +17,6 @@ import { theme } from "../theme/theme";
 import * as Haptics from "expo-haptics";
 import { useColorScheme } from "react-native";
 
-
-
 interface CustomInputProps {
   title: string;
   icon?: React.ReactNode;

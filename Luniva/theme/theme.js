@@ -104,12 +104,14 @@ export const theme = {
       background: "#FFF8F3",
       primaryText: "#2D2D2D",
       secondaryText: "#555555",
+      text: "#000000",
     },
 
     darkTheme: {
       background: "#1E1B24",
       primaryText: "#FFFFFF",
       secondaryText: "#CCCCCC",
+      text: "#FFFFFF",
     },
 
     colors: {

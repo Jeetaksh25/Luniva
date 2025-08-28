@@ -50,7 +50,7 @@ const CustomButton: FC<CutomButtonProps> = ({
           alignItems: "center",
           justifyContent: "center",
           padding: theme.padding.md,
-          borderRadius: theme.borderRadius.md,
+          borderRadius: theme.borderRadius.lg,
           backgroundColor: theme.colors.primaryColor
         },
         containerStyles,

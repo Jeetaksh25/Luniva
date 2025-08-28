@@ -45,8 +45,8 @@ export const useStore = create((set, get) => ({
   login: async (email, password) => {
     set({ loading: true });
     try {
-      await signInWithEmailAndPassword(auth, email, password);
-      set({ user: auth.currentUser });
+      const cred = await signInWithEmailAndPassword(auth, email, password);
+      await ensureUserDoc(cred.user);
     } finally {
       set({ loading: false });
     }
