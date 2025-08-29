@@ -24,8 +24,6 @@ export default function Layout() {
     <>
       <StatusBar
         style={colorScheme === "dark" ? "light" : "dark"}
-        backgroundColor={themeColors.background}
-        translucent={false}
       />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" options={{ headerShown: false }} />

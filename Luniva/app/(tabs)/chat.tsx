@@ -17,6 +17,8 @@ import { useColorScheme } from "react-native";
 import { theme } from "@/theme/theme";
 import { Emojis } from "@/utils/emojis";
 import Feather from "@expo/vector-icons/Feather";
+import ChatBubble from "@/comps/ChatBubble";
+import SidebarCalendar from "@/comps/SidebarCalendar";
 
 const Chat = () => {
   const [messages, setMessages] = useState([
@@ -31,6 +33,8 @@ const Chat = () => {
 
   const [currentEmoji, setCurrentEmoji] = useState("😀");
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  const flatListRef = useRef<FlatList>(null);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
 
   const animateEmojiChange = (onChangeEmoji: any) => {
     Animated.timing(fadeAnim, {
@@ -64,6 +68,12 @@ const Chat = () => {
     };
   }, []);
 
+  useEffect(() => {
+    if (flatListRef.current) {
+      flatListRef.current.scrollToEnd({ animated: true });
+    }
+  }, [messages]);
+
   return (
     <View style={{ flex: 1, backgroundColor: themeColors.background }}>
       <KeyboardAvoidingView
@@ -83,29 +93,31 @@ const Chat = () => {
             size={theme.fontSize["3xl"]}
             color={themeColors.text}
             style={styles.menuIcon}
+            onPress={() => setSidebarVisible(true)}
           />
-
+          <SidebarCalendar
+            visible={sidebarVisible}
+            onClose={() => setSidebarVisible(false)}
+          />
           <Animated.View style={[styles.emojiContainer, { opacity: fadeAnim }]}>
             <Text style={styles.emoji}>{currentEmoji}</Text>
           </Animated.View>
 
-          <View style={{ flex: 1,paddingHorizontal: 10}}>
+          <View style={{ flex: 1 }}>
             <FlatList
+              ref={flatListRef}
               data={messages}
               keyExtractor={(item) => item.id}
               renderItem={({ item }) => (
-                <View
-                  style={[
-                    styles.message,
-                    item.sender === "me"
-                      ? styles.myMessage
-                      : styles.otherMessage,
-                  ]}
-                >
-                  <Text style={styles.messageText}>{item.text}</Text>
-                </View>
+                <ChatBubble
+                  text={item.text}
+                  role={item.sender === "me" ? "user" : "ai"}
+                />
               )}
               contentContainerStyle={styles.listContent}
+              onContentSizeChange={() => {
+                flatListRef.current?.scrollToEnd({ animated: true });
+              }}
             />
           </View>
 
@@ -134,24 +146,10 @@ const styles = StyleSheet.create({
     paddingBottom: 10,
   },
   listContent: {
-    paddingHorizontal: 10,
+    paddingHorizontal: 20,
     paddingVertical: 5,
+    flexGrow: 1,
   },
-  message: {
-    padding: 10,
-    margin: 5,
-    borderRadius: 10,
-    maxWidth: "70%",
-  },
-  myMessage: {
-    backgroundColor: "#6A4C93",
-    alignSelf: "flex-end",
-  },
-  otherMessage: {
-    backgroundColor: "#FF6F61",
-    alignSelf: "flex-start",
-  },
-  messageText: { color: "white", fontSize: 16 },
   emoji: { fontSize: 80 },
   menuIcon: {
     position: "absolute",
