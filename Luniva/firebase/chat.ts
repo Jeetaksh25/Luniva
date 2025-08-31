@@ -15,6 +15,7 @@ import {
   DocumentData,
 } from "firebase/firestore";
 import { db } from "./config";
+import { updateUserStreak } from "./user";
 
 // Create a new chat (no model or archived fields)
 export async function createChat(
@@ -102,6 +103,9 @@ export async function sendAIMessage(uid: string, chatId: string, text: string, e
       updatedAt: serverTimestamp(),
       lastMessage: text,
     });
+
+    const chatDate = chatId; // Assuming chatId is the date string
+    await updateUserStreak(uid, chatDate);
     
     console.log("AI message saved successfully");
   } catch (error) {

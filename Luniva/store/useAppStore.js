@@ -15,6 +15,8 @@ import {
   sendAIMessage,
   watchMessages,
 } from "../firebase/chat";
+import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
+import { db } from "../firebase/config";
 
 const API_KEY = "AIzaSyApCBdx6xDwRZhWFEqT7CsGwnvp1mkVEhg";
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
@@ -34,7 +36,19 @@ export const useStore = create((set, get) => ({
         if (user) {
           try {
             await ensureUserDoc(user);
-            set({ user, loadingAuth: false });
+            
+            // Set up real-time listener for user data updates
+            const userRef = doc(db, "users", user.uid);
+            const unsubscribeUser = onSnapshot(userRef, (doc) => {
+              if (doc.exists()) {
+                const userData = doc.data();
+                console.log("🔥 User data updated - streak:", userData.dailyStreak);
+                set({ user: { ...user, ...userData } });
+              }
+            });
+            
+            // Store the unsubscribe function for cleanup
+            set({ user, loadingAuth: false, unsubscribeUser });
           } catch (error) {
             console.error("Error ensuring user doc:", error);
             set({ user: null, loadingAuth: false });
@@ -70,91 +84,85 @@ export const useStore = create((set, get) => ({
   },
 
   logout: async () => {
+    const { unsubscribeUser } = get();
+    if (unsubscribeUser) {
+      unsubscribeUser();
+    }
     await signOut(auth);
-    set({ user: null, chats: [], messages: [], currentChatId: null });
+    set({ 
+      user: null, 
+      chats: [], 
+      messages: [], 
+      currentChatId: null, 
+      unsubscribeUser: null 
+    });
   },
-
   // --- CHATS ---
 
   // In your useStore
-// In your useStore - FIXED sendMessage function
-sendMessage: async (text) => {
-  const { user, currentChatId, sendAIResponse, chats } = get(); // Added chats here
-  
-  if (!user || !currentChatId) {
-    console.error("No user or chat ID");
-    return;
-  }
+  // In your useStore - FIXED sendMessage function
+  sendMessage: async (text) => {
+    const { user, currentChatId, sendAIResponse, chats } = get(); // Added chats here
 
-  console.log("Sending message:", text);
-
-  const todayStr = new Date().toISOString().split('T')[0];
-  const currentChat = chats.find(chat => chat.chatId === currentChatId);
-  
-  if (currentChat?.date !== todayStr) {
-    console.error("Cannot send messages to past chats");
-    return;
-  }
-
-  try {
-    // Save user message first
-    await sendUserMessage(user.uid, currentChatId, text);
-
-    // Use Gemini API
-    const response = await fetch(API_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: "user",
-            parts: [{ text }],
-          },
-        ],
-      }),
-    });
-
-    const data = await response.json();
-    console.log("AI Raw Response:", JSON.stringify(data, null, 2));
-
-    if (!response.ok) {
-      throw new Error(data.error?.message || "AI API Error");
+    if (!user || !currentChatId) {
+      console.error("No user or chat ID");
+      return;
     }
 
-    // Extract AI response text
-    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text
-      ?.replace(/\*\*(.*?)\*\*/g, "$1")
-      ?.trim() || "No AI response";
+    console.log("Sending message:", text);
 
-    console.log("AI Response:", aiText);
+    const todayStr = new Date().toISOString().split("T")[0];
+    const currentChat = chats.find((chat) => chat.chatId === currentChatId);
 
-    // Save AI message to Firestore
-    await sendAIResponse(aiText);
-  } catch (err) {
-    console.error("AI Error:", err);
-    // Add error message to chat
-    await sendAIMessage(
-      user.uid,
-      currentChatId,
-      "Sorry, I encountered an error. Please try again."
-    );
-  }
-},
-
-  getStreak: () => {
-    const chats = get().chats;
-    const today = new Date();
-    let streak = 0;
-
-    for (let i = 0; i < chats.length; i++) {
-      const day = new Date(today);
-      day.setDate(today.getDate() - i);
-      const dateStr = day.toISOString().split("T")[0];
-      const chat = chats.find((c) => c.date === dateStr);
-      if (chat?.status === "done") streak++;
-      else break;
+    if (currentChat?.date !== todayStr) {
+      console.error("Cannot send messages to past chats");
+      return;
     }
-    return streak;
+
+    try {
+      // Save user message first
+      await sendUserMessage(user.uid, currentChatId, text);
+
+      // Use Gemini API
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [
+            {
+              role: "user",
+              parts: [{ text }],
+            },
+          ],
+        }),
+      });
+
+      const data = await response.json();
+      console.log("AI Raw Response:", JSON.stringify(data, null, 2));
+
+      if (!response.ok) {
+        throw new Error(data.error?.message || "AI API Error");
+      }
+
+      // Extract AI response text
+      const aiText =
+        data.candidates?.[0]?.content?.parts?.[0]?.text
+          ?.replace(/\*\*(.*?)\*\*/g, "$1")
+          ?.trim() || "No AI response";
+
+      console.log("AI Response:", aiText);
+
+      // Save AI message to Firestore
+      await sendAIResponse(aiText);
+    } catch (err) {
+      console.error("AI Error:", err);
+      // Add error message to chat
+      await sendAIMessage(
+        user.uid,
+        currentChatId,
+        "Sorry, I encountered an error. Please try again."
+      );
+    }
   },
 
   loadDailyChats: async (month, year) => {
@@ -267,6 +275,26 @@ sendMessage: async (text) => {
       console.log("Using existing chat:", todayChat.chatId);
       set({ currentChatId: todayChat.chatId });
       return todayChat.chatId;
+    }
+  },
+
+  getStreak: () => {
+    const { user } = get();
+    if (!user) return 0;
+    return user.dailyStreak || 0;
+  },
+
+  getUserData: async () => {
+    const { user } = get();
+    if (!user) return null;
+
+    try {
+      const userRef = doc(db, "users", user.uid);
+      const userSnap = await getDoc(userRef);
+      return userSnap.exists() ? userSnap.data() : null;
+    } catch (error) {
+      console.error("Error getting user data:", error);
+      return null;
     }
   },
 }));

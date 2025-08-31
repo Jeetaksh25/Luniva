@@ -5,9 +5,8 @@ import {
   updateDoc,
   serverTimestamp 
 } from "firebase/firestore";
-import { db } from "./config"; // Remove ts import
+import { db } from "./config";
 
-/** Create the /users/{uid} doc if missing */
 export async function ensureUserDoc(user, { username = null } = {}) {
   try {
     const ref = doc(db, "users", user.uid);
@@ -18,8 +17,8 @@ export async function ensureUserDoc(user, { username = null } = {}) {
       email: user.email ?? "",
       photoURL: user.photoURL ?? null,
       username: username ?? (user.displayName?.toLowerCase()?.replace(/\s+/g, '') ?? ""),
-      createdAt: serverTimestamp(),
-      lastLogin: serverTimestamp(),
+      createdAt: serverTimestamp(), // ✅ WITH parentheses
+      lastLogin: serverTimestamp(), // ✅ WITH parentheses
       dailyStreak: 0,
       streakUpdatedOn: null,
     };
@@ -28,11 +27,62 @@ export async function ensureUserDoc(user, { username = null } = {}) {
       await setDoc(ref, base);
       console.log("User document created");
     } else {
-      await updateDoc(ref, { lastLogin: serverTimestamp() });
-      console.log("User document updated");
+      // Check if we need to update streak
+      const userData = snap.data();
+      const lastLoginDate = userData.lastLogin?.toDate();
+      const today = new Date();
+      
+      // Reset streak if more than 1 day has passed since last login
+      if (lastLoginDate && (today - lastLoginDate) > 24 * 60 * 60 * 1000) {
+        await updateDoc(ref, { 
+          lastLogin: serverTimestamp(), // ✅ WITH parentheses
+          dailyStreak: 0,
+          streakUpdatedOn: serverTimestamp() // ✅ WITH parentheses
+        });
+        console.log("Streak reset due to gap");
+      } else {
+        await updateDoc(ref, { lastLogin: serverTimestamp() }); // ✅ WITH parentheses
+        console.log("User document updated");
+      }
     }
   } catch (error) {
     console.error("Error in ensureUserDoc:", error);
     throw error;
+  }
+}
+
+export async function updateUserStreak(uid, chatDate) {
+  try {
+    console.log("Updating streak for:", uid, "chat date:", chatDate);
+    
+    const userRef = doc(db, "users", uid);
+    const userSnap = await getDoc(userRef);
+    
+    if (!userSnap.exists()) {
+      console.log("User document doesn't exist");
+      return;
+    }
+
+    const userData = userSnap.data();
+    const today = new Date().toISOString().split('T')[0];
+    const lastStreakUpdate = userData.streakUpdatedOn?.toDate()?.toISOString().split('T')[0];
+    
+    console.log("Today:", today, "Last update:", lastStreakUpdate, "Current streak:", userData.dailyStreak);
+    
+    // Only update streak if this is today's chat and streak hasn't been updated today
+    if (chatDate === today && lastStreakUpdate !== today) {
+      const newStreak = (userData.dailyStreak || 0) + 1;
+      await updateDoc(userRef, {
+        dailyStreak: newStreak,
+        streakUpdatedOn: serverTimestamp()
+      });
+      console.log("✅ Streak updated to:", newStreak);
+    } else {
+      console.log("❌ Streak not updated - conditions not met");
+      console.log("chatDate === today:", chatDate === today);
+      console.log("lastStreakUpdate !== today:", lastStreakUpdate !== today);
+    }
+  } catch (error) {
+    console.error("Error updating streak:", error);
   }
 }
