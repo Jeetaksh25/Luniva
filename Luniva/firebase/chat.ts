@@ -17,15 +17,31 @@ import {
 import { db } from "./config";
 
 // Create a new chat (no model or archived fields)
-export async function createChat(uid: string, title = "New chat") {
+export async function createChat(
+  uid: string,
+  title = "New chat",
+  useDateAsId?: string
+) {
   const chatsCol = collection(db, "users", uid, "chats");
-  const chatRef = await addDoc(chatsCol, {
-    title,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-    lastMessage: "",
-  });
-  return chatRef.id;
+
+  if (useDateAsId) {
+    const chatRef = doc(chatsCol, useDateAsId);
+    await setDoc(chatRef, {
+      title,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      lastMessage: "",
+    });
+    return chatRef.id;
+  } else {
+    const chatRef = await addDoc(chatsCol, {
+      title,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      lastMessage: "",
+    });
+    return chatRef.id;
+  }
 }
 
 export async function getOrCreateDailyChat(uid: string, date: string) {
@@ -46,54 +62,82 @@ export async function getOrCreateDailyChat(uid: string, date: string) {
 }
 
 // Send user message
-export async function sendUserMessage(
-  uid: string,
-  chatId: string,
-  text: string
-) {
-  const msgsCol = collection(db, "users", uid, "chats", chatId, "messages");
-  await addDoc(msgsCol, {
-    role: "user",
-    text,
-    createdAt: serverTimestamp(),
-  });
-  await updateDoc(doc(db, "users", uid, "chats", chatId), {
-    updatedAt: serverTimestamp(),
-    lastMessage: text,
-  });
+// In firebase/chat.js - Add error handling
+export async function sendUserMessage(uid: string, chatId: string, text: string) {
+  try {
+    console.log("Saving message:", { role: "user", text });
+
+    const msgsCol = collection(db, "users", uid, "chats", chatId, "messages");
+    await addDoc(msgsCol, {
+      role: "user",
+      text,
+      createdAt: serverTimestamp(),
+    });
+
+    await updateDoc(doc(db, "users", uid, "chats", chatId), {
+      updatedAt: serverTimestamp(),
+      lastMessage: text,
+    });
+    
+    console.log("Message saved successfully");
+  } catch (error) {
+    console.error("Error saving user message:", error);
+    throw error;
+  }
 }
 
-// Send AI message
-export async function sendAIMessage(
-  uid: string,
-  chatId: string,
-  text: string,
-  extra = {}
-) {
-  const msgsCol = collection(db, "users", uid, "chats", chatId, "messages");
-  await addDoc(msgsCol, {
-    role: "ai",
-    text,
-    createdAt: serverTimestamp(),
-    ...extra,
-  });
-  await updateDoc(doc(db, "users", uid, "chats", chatId), {
-    updatedAt: serverTimestamp(),
-    lastMessage: text,
-  });
+export async function sendAIMessage(uid: string, chatId: string, text: string, extra = {}) {
+  try {
+    console.log("Saving AI response:", { role: "ai", text, ...extra });
+
+    const msgsCol = collection(db, "users", uid, "chats", chatId, "messages");
+    await addDoc(msgsCol, {
+      role: "ai",
+      text,
+      createdAt: serverTimestamp(),
+      ...extra,
+    });
+
+    await updateDoc(doc(db, "users", uid, "chats", chatId), {
+      updatedAt: serverTimestamp(),
+      lastMessage: text,
+    });
+    
+    console.log("AI message saved successfully");
+  } catch (error) {
+    console.error("Error saving AI message:", error);
+    throw error;
+  }
 }
 
-// Real-time message listener
-export function watchMessages(
-  uid: string,
-  chatId: string,
-  callback: (messages: any[]) => void
-) {
+// Fix the watchMessages function to handle Firestore timestamps
+export function watchMessages(uid: string, chatId: string, callback: (messages: any[]) => void) {
   const msgsCol = collection(db, "users", uid, "chats", chatId, "messages");
   const q = query(msgsCol, orderBy("createdAt", "asc"));
-  return onSnapshot(q, (snap) => {
-    callback(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-  });
+  
+  console.log("Setting up message listener for:", uid, chatId);
+  
+  return onSnapshot(q, 
+    (snap) => {
+      console.log("Messages snapshot received:", snap.docs.length, "messages");
+      const msgs = snap.docs.map((d) => {
+        const data = d.data();
+        const createdAt = data.createdAt?.toDate
+          ? data.createdAt.toDate()
+          : new Date(data.createdAt?.seconds * 1000) || new Date();
+
+        return {
+          id: d.id,
+          ...data,
+          createdAt,
+        };
+      });
+      callback(msgs);
+    },
+    (error) => {
+      console.error("Error in message listener:", error);
+    }
+  );
 }
 
 export async function getChatsForMonth(

@@ -17,11 +17,13 @@ interface MessageInputProps {
   placeholder?: string;
   onSend?: (message: string) => void;
   onChangeText?: (text: string) => void;
+  disable?: boolean;
 }
 
 const MessageInput: FC<MessageInputProps> = ({
   placeholder = "Type a message",
   onSend,
+  disable = false,
 }) => {
   const [message, setMessage] = useState("");
   const [inputHeight, setInputHeight] = useState(40);
@@ -45,6 +47,7 @@ const MessageInput: FC<MessageInputProps> = ({
             height: Math.min(160, inputHeight),
           },
         ]}
+        editable={!disable}
         placeholder={placeholder}
         placeholderTextColor={themeColors.text + "99"}
         multiline

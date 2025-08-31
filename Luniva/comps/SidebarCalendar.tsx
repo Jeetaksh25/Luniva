@@ -55,7 +55,10 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
 
   const days = Array.from({ length: daysInMonth }, (_, i) => {
     const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(i + 1).padStart(2, "0")}`;
-    const chatData = chats.find((c: { date: string; status: string; chatId: string | null }) => c.date === dateStr);
+    const chatData = chats.find(
+      (c: { date: string; status: string; chatId: string | null }) =>
+        c.date === dateStr
+    );
     return chatData || { date: dateStr, status: "upcoming", chatId: null };
   });
 
@@ -68,7 +71,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
       return m - 1;
     });
   };
-  
+
   const handleNextMonth = () => {
     setMonth((m) => {
       if (m === 11) {
@@ -79,10 +82,27 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
     });
   };
 
+  const nonUpcomingChat = chats.find((c: { status: string; date: string }) => c.status !== "upcoming");
+
+  const firstChatDate = new Date(nonUpcomingChat?.date ?? new Date());
+
   const renderDay = ({ item }: { item: any }) => {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const isToday = item.date === todayStr;
+    const isPastChat = item.date < todayStr;
+    
     let borderColor = theme.colors.secondaryColor;
-    if (item.status === "done") borderColor = theme.colors.successColor;
-    else if (item.status === "missed") borderColor = theme.colors.errorColor;
+    let backgroundColor = 'transparent';
+  
+    if (item.status === "done") {
+      borderColor = theme.colors.successColor;
+    } else if (isPastChat && item.status !== "done") {
+      borderColor = theme.colors.errorColor;
+    }
+  
+    if (isToday) {
+      backgroundColor = theme.colors.primaryColor + '20';
+    }
 
     return (
       <TouchableOpacity
@@ -95,11 +115,12 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
           },
         ]}
         onPress={() => {
-          if (item.chatId || item.status === "done" || item.status === "missed")
-            openDailyChat(item.date);
+          if (new Date(item.date) > new Date()) return;
+          if (item.chatId) openDailyChat(item.date);
         }}
       >
         <Text style={{ color: "#fff" }}>{new Date(item.date).getDate()}</Text>
+        {isToday && <Text style={styles.todayIndicator}>Today</Text>}
       </TouchableOpacity>
     );
   };
@@ -173,5 +194,11 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: "#444",
     borderRadius: 6,
+  },
+  todayIndicator: {
+    fontSize: 8,
+    color: theme.colors.primaryColor,
+    position: 'absolute',
+    bottom: 2,
   },
 });

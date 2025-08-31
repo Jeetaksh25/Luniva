@@ -28,9 +28,15 @@ export default function FirstScreen() {
   const router = useRouter();
 
   const { user, initAuth, loadingAuth } = useStore();
+  const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    initAuth();
+    const initializeAuth = async () => {
+      await initAuth();
+      setAuthChecked(true);
+    };
+    
+    initializeAuth();
   }, []);
 
   const [currentEmoji, setCurrentEmoji] = useState("😀");
@@ -108,7 +114,7 @@ export default function FirstScreen() {
     router.push("/signin");
   };
 
-  if (user) {
+  if (authChecked && user) {
     return <Redirect href="/chat" />;
   }
 
@@ -137,7 +143,7 @@ export default function FirstScreen() {
           >
             Your Friend to take care of your mental health and well-being.
           </Text>
-          <CustomButton title="Get Started" handlePress={handleGetStarted} isLoading={loadingAuth} loadingText={"Loading"} />
+          <CustomButton title="Get Started" handlePress={handleGetStarted} isLoading={!authChecked || loadingAuth} loadingText={!authChecked ? "Authenticating" : "Loading"} />
         </View>
       </ScrollView>
     </SafeAreaView>

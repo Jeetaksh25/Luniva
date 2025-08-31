@@ -15,8 +15,9 @@ import {
   sendAIMessage,
   watchMessages,
 } from "../firebase/chat";
-import { getDoc, doc } from "firebase/firestore"; // needed for getDoc
-import { db } from "../firebase/config"; // needed for Firestore reference
+
+const API_KEY = "AIzaSyApCBdx6xDwRZhWFEqT7CsGwnvp1mkVEhg";
+const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
 
 export const useStore = create((set, get) => ({
   user: null,
@@ -25,16 +26,24 @@ export const useStore = create((set, get) => ({
   loading: false,
   currentChatId: null,
   loadingAuth: true,
+  loadingChat: false,
 
   initAuth: () => {
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        await ensureUserDoc(user);
-        set({ user });
-      } else {
-        set({ user: null });
-      }
-      set({ loadingAuth: false });
+    return new Promise((resolve) => {
+      onAuthStateChanged(auth, async (user) => {
+        if (user) {
+          try {
+            await ensureUserDoc(user);
+            set({ user, loadingAuth: false });
+          } catch (error) {
+            console.error("Error ensuring user doc:", error);
+            set({ user: null, loadingAuth: false });
+          }
+        } else {
+          set({ user: null, loadingAuth: false });
+        }
+        resolve();
+      });
     });
   },
 
@@ -66,6 +75,88 @@ export const useStore = create((set, get) => ({
   },
 
   // --- CHATS ---
+
+  // In your useStore
+// In your useStore - FIXED sendMessage function
+sendMessage: async (text) => {
+  const { user, currentChatId, sendAIResponse, chats } = get(); // Added chats here
+  
+  if (!user || !currentChatId) {
+    console.error("No user or chat ID");
+    return;
+  }
+
+  console.log("Sending message:", text);
+
+  const todayStr = new Date().toISOString().split('T')[0];
+  const currentChat = chats.find(chat => chat.chatId === currentChatId);
+  
+  if (currentChat?.date !== todayStr) {
+    console.error("Cannot send messages to past chats");
+    return;
+  }
+
+  try {
+    // Save user message first
+    await sendUserMessage(user.uid, currentChatId, text);
+
+    // Use Gemini API
+    const response = await fetch(API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [
+          {
+            role: "user",
+            parts: [{ text }],
+          },
+        ],
+      }),
+    });
+
+    const data = await response.json();
+    console.log("AI Raw Response:", JSON.stringify(data, null, 2));
+
+    if (!response.ok) {
+      throw new Error(data.error?.message || "AI API Error");
+    }
+
+    // Extract AI response text
+    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text
+      ?.replace(/\*\*(.*?)\*\*/g, "$1")
+      ?.trim() || "No AI response";
+
+    console.log("AI Response:", aiText);
+
+    // Save AI message to Firestore
+    await sendAIResponse(aiText);
+  } catch (err) {
+    console.error("AI Error:", err);
+    // Add error message to chat
+    await sendAIMessage(
+      user.uid,
+      currentChatId,
+      "Sorry, I encountered an error. Please try again."
+    );
+  }
+},
+
+  getStreak: () => {
+    const chats = get().chats;
+    const today = new Date();
+    let streak = 0;
+
+    for (let i = 0; i < chats.length; i++) {
+      const day = new Date(today);
+      day.setDate(today.getDate() - i);
+      const dateStr = day.toISOString().split("T")[0];
+      const chat = chats.find((c) => c.date === dateStr);
+      if (chat?.status === "done") streak++;
+      else break;
+    }
+    return streak;
+  },
+
   loadDailyChats: async (month, year) => {
     const { user } = get();
     if (!user) return;
@@ -136,18 +227,46 @@ export const useStore = create((set, get) => ({
   },
 
   // --- MESSAGING ---
-  sendMessage: async (text) => {
-    const { user, currentChatId, loadDailyChats } = get();
-    if (!user || !currentChatId) return;
-    await sendUserMessage(user.uid, currentChatId, text);
-    // Refresh streak instantly
-    const currentDate = new Date();
-    await loadDailyChats(currentDate.getMonth(), currentDate.getFullYear());
-  },
-
   sendAIResponse: async (text, extra) => {
     const { user, currentChatId } = get();
     if (!user || !currentChatId) return;
     await sendAIMessage(user.uid, currentChatId, text, extra);
+  },
+  // In your useStore
+  createTodayChat: async () => {
+    if (get().loadingChat) return; // Prevent multiple calls
+
+    set({ loadingChat: true });
+    const { user, chats } = get();
+    if (!user) {
+      console.error("No user found when creating today's chat");
+      return;
+    }
+
+    const todayStr = new Date().toISOString().split("T")[0];
+    let todayChat = chats.find((c) => c.date === todayStr);
+
+    if (!todayChat) {
+      console.log("Creating new chat for today:", todayStr);
+      try {
+        const newChatId = await createChat(user.uid, todayStr, todayStr);
+        todayChat = { date: todayStr, chatId: newChatId, status: "pending" };
+        set({
+          chats: [...chats, todayChat],
+          currentChatId: newChatId, // IMPORTANT: Set the currentChatId here
+        });
+        console.log("Chat created with ID:", newChatId);
+        return newChatId;
+      } catch (error) {
+        console.error("Error creating chat:", error);
+        throw error;
+      } finally {
+        set({ loadingChat: false });
+      }
+    } else {
+      console.log("Using existing chat:", todayChat.chatId);
+      set({ currentChatId: todayChat.chatId });
+      return todayChat.chatId;
+    }
   },
 }));
