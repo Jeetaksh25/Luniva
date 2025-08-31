@@ -13,13 +13,15 @@ import Feather from "@expo/vector-icons/Feather";
 import { useStore } from "@/store/useAppStore";
 import { theme } from "@/theme/theme";
 import { darkenColor } from "@/functions/darkenColor";
+import { getTodayDateString, isToday } from '@/utils/dateUtils';
 
 const { width } = Dimensions.get("window");
 const SIDEBAR_WIDTH = width * 0.8;
 
-const DAY_MARGIN = 3;
+const DAY_MARGIN = 2;
 const NUM_COLUMNS = 7;
-const dayBoxSize = (SIDEBAR_WIDTH - DAY_MARGIN * 2 * NUM_COLUMNS) / NUM_COLUMNS;
+const dayBoxSize =
+  (SIDEBAR_WIDTH - DAY_MARGIN * 2 * NUM_COLUMNS - 20) / NUM_COLUMNS;
 
 interface SidebarCalendarProps {
   visible: boolean;
@@ -41,7 +43,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
   const themeColors =
     colorScheme === "dark" ? theme.darkTheme : theme.lightTheme;
 
-  const { user } = useStore();
+  const { user, currentDate } = useStore();
   const [streak, setStreak] = useState(0);
   const [firstChatDate, setFirstChatDate] = useState<Date | null>(null);
 
@@ -50,12 +52,25 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
       console.log("📊 Current user streak:", user.dailyStreak);
       setStreak(user.dailyStreak || 0);
     }
-  }, [user]); 
-  
+  }, [user]);
+
   useEffect(() => {
-    loadDailyChats(month, year);
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+
+    setMonth(currentMonth);
+    setYear(currentYear);
+    loadDailyChats(currentMonth, currentYear);
     calculateFirstChatDate();
-  }, [month, year, chats]);
+  }, [currentDate]);
+
+  // In your Chat component, add this
+  useEffect(() => {
+    // Debug date info on component mount
+    const debugInfo = useStore.getState().debugDateInfo();
+    console.log("📋 Initial date debug:", debugInfo);
+  }, []);
 
   const calculateFirstChatDate = () => {
     const doneChats = chats.filter((chat: any) => chat.status === "done");
@@ -111,44 +126,66 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
     });
   };
 
+  useEffect(() => {
+    const today = new Date();
+    const currentMonth = today.getMonth();
+    const currentYear = today.getFullYear();
+  
+    setMonth(currentMonth);
+    setYear(currentYear);
+    loadDailyChats(currentMonth, currentYear);
+    calculateFirstChatDate();
+    
+    // Debug: check all chats
+    useStore.getState().debugChats();
+  }, [currentDate]);
+
+// In your SidebarCalendar or anywhere
+useEffect(() => {
+  useStore.getState().debugAugust31Chat();
+}, []);
+
   const renderDay = ({ item }: { item: any }) => {
-    const todayStr = new Date().toISOString().split("T")[0];
-    const isToday = item.date === todayStr;
+    const todayStr = getTodayDateString();
+    const isTodayItem = item.date === todayStr;
     const itemDate = new Date(item.date);
     const currentDate = new Date();
-
+    
+    // Reset time part for proper date comparison
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    currentDate.setHours(0, 0, 0, 0);
+    itemDate.setHours(0, 0, 0, 0);
+  
     let borderColor = theme.colors.secondaryColor;
     let backgroundColor = "transparent";
-    let textColor = "#fff";
-
+    let textColor = themeColors.text;
+    let opacity = 1;
+  
     // Determine colors based on the requirements
-    if (firstChatDate && itemDate < firstChatDate) {
-      // Dates before first chat - secondaryColor
-      borderColor = theme.colors.secondaryColor;
-    } else if (item.status === "done") {
+    if (item.status === "done") {
       // Chats with messages - successColor
       borderColor = theme.colors.successColor;
-    } else if (
-      itemDate < currentDate &&
-      itemDate >= (firstChatDate || currentDate)
-    ) {
-      // Past dates without chats (after first chat) - errorColor
+    } else if (itemDate < today && item.status !== "done") {
+      // Past dates without chats - errorColor
       borderColor = theme.colors.errorColor;
     } else {
-      // Future dates or dates before first chat - secondaryColor
+      // Future dates or upcoming chats - secondaryColor
       borderColor = theme.colors.secondaryColor;
     }
-
+  
     // Today gets special styling
-    if (isToday) {
+    if (isTodayItem) {
       backgroundColor = theme.colors.infoColor + "40"; // Add transparency
       borderColor = theme.colors.infoColor;
       textColor = theme.colors.infoColor;
     }
-
+  
     // Dim future dates and non-clickable dates
-    const opacity = itemDate > currentDate || item.status !== "done" ? 0.6 : 1;
-
+    if (itemDate > currentDate || item.status !== "done") {
+      opacity = 0.6;
+    }
+  
     return (
       <TouchableOpacity
         style={[
@@ -162,21 +199,25 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
           },
         ]}
         onPress={() => {
-          // Only allow clicking on past dates with completed chats
-          if (itemDate > currentDate || item.status !== "done") return;
-          if (item.chatId) openDailyChat(item.date);
+          // Only allow clicking on dates with completed chats
+          if (item.status !== "done") return;
+          openDailyChat(item.date);
         }}
-        disabled={itemDate > currentDate || item.status !== "done"}
+        disabled={item.status !== "done"}
       >
         <Text
           style={{
-            color: themeColors.text,
-            fontWeight: isToday ? "bold" : "normal",
+            color: textColor,
+            fontWeight: isTodayItem ? "bold" : "normal",
           }}
         >
           {itemDate.getDate()}
         </Text>
-        {isToday && <Text style={styles.todayIndicator}>Today</Text>}
+        {isTodayItem && (
+          <Text style={[styles.todayIndicator, { color: textColor }]}>
+            Today
+          </Text>
+        )}
       </TouchableOpacity>
     );
   };
@@ -246,7 +287,7 @@ const styles = StyleSheet.create({
     left: 0,
     bottom: 0,
     width: SIDEBAR_WIDTH,
-    padding: 20,
+    padding: 10,
     zIndex: 10,
     height: "95%",
   },

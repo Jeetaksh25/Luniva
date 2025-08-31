@@ -149,21 +149,59 @@ export async function getChatsForMonth(
   month: number,
   year: number
 ) {
-  const start = new Date(year, month, 1);
-  const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
-  const chatsCol = collection(db, "users", uid, "chats");
-  const q = query(
-    chatsCol,
-    where("updatedAt", ">=", Timestamp.fromDate(start)),
-    where("updatedAt", "<=", Timestamp.fromDate(end))
-  );
-  const snap = await getDocs(q);
+  try {
+    // Create date range for the month
+    const start = new Date(year, month, 1);
+    const end = new Date(year, month + 1, 0, 23, 59, 59, 999);
+    
+    const chatsCol = collection(db, "users", uid, "chats");
+    const q = query(
+      chatsCol,
+      where("updatedAt", ">=", Timestamp.fromDate(start)),
+      where("updatedAt", "<=", Timestamp.fromDate(end))
+    );
+    
+    const snap = await getDocs(q);
+    const result: Record<string, DocumentData> = {};
 
-  const result: Record<string, DocumentData> = {};
+    snap.forEach((doc) => {
+      result[doc.id] = doc.data();
+    });
 
-  snap.forEach((doc) => {
-    result[doc.id] = doc.data();
-  });
+    return result;
+  } catch (error) {
+    console.error("Error getting chats for month:", error);
+    return {};
+  }
+}
 
-  return result;
+export async function checkChatHasMessages(uid: string, chatId: string): Promise<boolean> {
+  try {
+    const messagesCol = collection(db, "users", uid, "chats", chatId, "messages");
+    const messagesSnap = await getDocs(messagesCol);
+    return messagesSnap.size > 0;
+  } catch (error) {
+    console.error("Error checking chat messages:", error);
+    return false;
+  }
+}
+
+export async function getAllUserChats(uid: string): Promise<Record<string, DocumentData>> {
+  try {
+    const chatsCol = collection(db, "users", uid, "chats");
+    const snap = await getDocs(chatsCol);
+    
+    const result: Record<string, DocumentData> = {};
+    snap.forEach((doc) => {
+      // Only include date-based chats (YYYY-MM-DD format)
+      if (/^\d{4}-\d{2}-\d{2}$/.test(doc.id)) {
+        result[doc.id] = doc.data();
+      }
+    });
+    
+    return result;
+  } catch (error) {
+    console.error("Error getting all user chats:", error);
+    return {};
+  }
 }

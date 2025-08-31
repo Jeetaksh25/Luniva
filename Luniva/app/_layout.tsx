@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { useColorScheme } from "react-native";
 import { theme } from "@/theme/theme";
+import { setupDateChangeListener } from '@/services/backgroundService';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -18,6 +19,10 @@ export default function Layout() {
     };
 
     prepare();
+  }, []);
+
+  useEffect(() => {
+    setupDateChangeListener();
   }, []);
 
   return (

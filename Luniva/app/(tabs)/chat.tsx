@@ -21,6 +21,8 @@ import ChatBubble from "@/comps/ChatBubble";
 import SidebarCalendar from "@/comps/SidebarCalendar";
 import { useStore } from "@/store/useAppStore";
 import { useRouter, Redirect } from "expo-router";
+import { useDateChange } from "@/utils/useDateChange";
+import { getTodayDateString, isToday } from '@/utils/dateUtils';
 
 const Chat = () => {
   const [input, setInput] = useState("");
@@ -35,23 +37,42 @@ const Chat = () => {
   const flatListRef = useRef<FlatList>(null);
   const [sidebarVisible, setSidebarVisible] = useState(false);
 
-  const { messages, sendMessage, loadMessages, currentChatId, chats, user } =
-    useStore();
+  const {
+    messages,
+    sendMessage,
+    loadMessages,
+    currentChatId,
+    chats,
+    user,
+    handleDateChange,
+  } = useStore();
+
   const [isTodayChat, setIsTodayChat] = useState(true);
 
   const router = useRouter();
+
+  useDateChange((newDate: string) => {
+    handleDateChange(newDate);
+  });
+
+  useEffect(() => {
+    const todayStr = getTodayDateString(); // Use utility here
+    const currentChat = chats.find(
+      (chat: { chatId: string; date: string }) => chat.chatId === currentChatId
+    );
+    setIsTodayChat(currentChat?.date === todayStr);
+  }, [currentChatId, chats]);
 
   useEffect(() => {
     const checkAuth = async () => {
       const { user } = useStore.getState();
       if (!user) {
         console.log("No user found, redirecting to signin");
-        router.replace('/signin');
+        router.replace("/signin");
         return;
       }
-      
     };
-  
+
     checkAuth();
   }, []);
 
@@ -60,33 +81,35 @@ const Chat = () => {
   }
 
   // In your Chat component
-useEffect(() => {
-  const { user } = useStore.getState();
-  if (!user) {
-    console.error("No authenticated user");
-    return;
-  }
-  
-  const createChatIfNeeded = async () => {
-    if (!currentChatId) {
-      setIsCreatingChat(true);
-      try {
-        await useStore.getState().createTodayChat();
-        console.log("Today's chat created successfully");
-      } catch (error) {
-        console.error("Failed to create chat:", error);
-      } finally {
-        setIsCreatingChat(false);
-      }
+  useEffect(() => {
+    const { user } = useStore.getState();
+    if (!user) {
+      console.error("No authenticated user");
+      return;
     }
-  };
 
-  createChatIfNeeded();
-}, []);
+    const createChatIfNeeded = async () => {
+      if (!currentChatId) {
+        setIsCreatingChat(true);
+        try {
+          await useStore.getState().createTodayChat();
+          console.log("Today's chat created successfully");
+        } catch (error) {
+          console.error("Failed to create chat:", error);
+        } finally {
+          setIsCreatingChat(false);
+        }
+      }
+    };
+
+    createChatIfNeeded();
+  }, []);
 
   useEffect(() => {
-    const todayStr = new Date().toISOString().split("T")[0];
-    const currentChat = chats.find((chat: { chatId: string; date: string }) => chat.chatId === currentChatId);
+    const todayStr = getTodayDateString();
+    const currentChat = chats.find(
+      (chat: { chatId: string; date: string }) => chat.chatId === currentChatId
+    );
     setIsTodayChat(currentChat?.date === todayStr);
   }, [currentChatId, chats]);
 
@@ -181,6 +204,61 @@ useEffect(() => {
     }
   }, [messages]);
 
+  useEffect(() => {
+    const initializeChat = async () => {
+      const { user } = useStore.getState();
+      if (!user) {
+        console.error("No authenticated user");
+        return;
+      }
+  
+      const todayStr = new Date().toISOString().split("T")[0];
+      const { chats, currentChatId } = useStore.getState();
+      
+      // Check if we're already on today's chat
+      const currentChat = chats.find((chat: { date: string; chatId: string | null; status: string }) => 
+        chat.chatId === currentChatId
+      );
+      const isOnTodayChat = currentChat?.date === todayStr;
+  
+      if (!isOnTodayChat) {
+        setIsCreatingChat(true);
+        try {
+          await useStore.getState().createTodayChat();
+          console.log("Switched to today's chat");
+        } catch (error) {
+          console.error("Failed to switch to today's chat:", error);
+        } finally {
+          setIsCreatingChat(false);
+        }
+      }
+    };
+  
+    initializeChat();
+  }, []);
+
+  useEffect(() => {
+    const todayStr = getTodayDateString(); // Use utility here
+    const currentChat = chats.find(
+      (chat: { chatId: string; date: string }) => chat.chatId === currentChatId
+    );
+    setIsTodayChat(currentChat?.date === todayStr);
+  }, [currentChatId, chats]);
+
+  useEffect(() => {
+    if (!currentChatId) {
+      console.log("No current chat ID, skipping message loading");
+      return;
+    }
+  
+    console.log("Loading messages for chat:", currentChatId);
+    const unsubscribe = loadMessages(currentChatId);
+  
+    return () => {
+      if (unsubscribe) unsubscribe();
+    };
+  }, [currentChatId, loadMessages]);
+
   return (
     <View style={{ flex: 1, backgroundColor: themeColors.background }}>
       <KeyboardAvoidingView
@@ -254,13 +332,23 @@ useEffect(() => {
             />
           )}
 
-{currentChatId && !isTodayChat && (
-        <View style={styles.readOnlyOverlay}>
-          <Text style={{ color: themeColors.text, textAlign: 'center' }}>
-            This chat is from a previous date. You can only view messages.
-          </Text>
-        </View>
-      )}
+          {currentChatId && !isTodayChat && (
+            <View style={styles.readOnlyOverlay}>
+              <Text style={{ color: themeColors.text, textAlign: "center" }}>
+                📖 This chat is from a previous date. You can only view
+                messages.
+              </Text>
+              <TouchableOpacity
+                style={styles.todayButton}
+                onPress={() => {
+                  // Switch to today's chat
+                  useStore.getState().createTodayChat();
+                }}
+              >
+                <Text style={{ color: "#fff" }}>Go to Today's Chat</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </KeyboardAvoidingView>
     </View>
@@ -303,6 +391,13 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.infoColor,
     borderTopWidth: 1,
     borderTopColor: theme.colors.infoColor,
+  },
+  todayButton: {
+    marginTop: 10,
+    padding: 10,
+    backgroundColor: theme.colors.primaryColor,
+    borderRadius: 8,
+    alignSelf: 'center',
   },
 });
 

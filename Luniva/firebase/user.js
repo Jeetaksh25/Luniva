@@ -64,8 +64,15 @@ export async function updateUserStreak(uid, chatDate) {
     }
 
     const userData = userSnap.data();
-    const today = new Date().toISOString().split('T')[0];
-    const lastStreakUpdate = userData.streakUpdatedOn?.toDate()?.toISOString().split('T')[0];
+    const today = getTodayDateString(); // Use the corrected function
+    
+    // Convert lastStreakUpdate to date string if it's a timestamp
+    let lastStreakUpdate = userData.streakUpdatedOn;
+    if (lastStreakUpdate && lastStreakUpdate.toDate) {
+      lastStreakUpdate = lastStreakUpdate.toDate().toISOString().split('T')[0];
+    } else if (lastStreakUpdate && lastStreakUpdate.seconds) {
+      lastStreakUpdate = new Date(lastStreakUpdate.seconds * 1000).toISOString().split('T')[0];
+    }
     
     console.log("Today:", today, "Last update:", lastStreakUpdate, "Current streak:", userData.dailyStreak);
     
@@ -79,8 +86,6 @@ export async function updateUserStreak(uid, chatDate) {
       console.log("✅ Streak updated to:", newStreak);
     } else {
       console.log("❌ Streak not updated - conditions not met");
-      console.log("chatDate === today:", chatDate === today);
-      console.log("lastStreakUpdate !== today:", lastStreakUpdate !== today);
     }
   } catch (error) {
     console.error("Error updating streak:", error);
