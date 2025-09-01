@@ -10,6 +10,9 @@ import {
   Keyboard,
   Animated,
   Easing,
+  PanResponder,
+  Dimensions,
+  BackHandler,
 } from "react-native";
 import MessageInput from "@/comps/MessageInput";
 import { useColorScheme } from "react-native";
@@ -21,6 +24,10 @@ import { useStore } from "@/store/useAppStore";
 import { useRouter, Redirect } from "expo-router";
 import { useDateChange } from "@/utils/useDateChange";
 import { getTodayDateString } from "@/utils/dateUtils";
+import { transformUserMessage } from "@/utils/transformPrompt";
+
+const { width } = Dimensions.get("window");
+const SWIPE_THRESHOLD = 50;
 
 const Chat = () => {
   const [input, setInput] = useState("");
@@ -34,6 +41,7 @@ const Chat = () => {
   const fadeAnim = useRef(new Animated.Value(1)).current;
   const flatListRef = useRef<FlatList>(null);
   const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [lastAIText, setLastAIText] = useState("");
 
   const {
     messages,
@@ -48,6 +56,64 @@ const Chat = () => {
   const router = useRouter();
 
   useDateChange((newDate: string) => handleDateChange(newDate));
+
+  useEffect(() => {
+    const latestAIMessage = messages.findLast((m: any) => m.role === "ai");
+    if (latestAIMessage && latestAIMessage.text !== lastAIText) {
+      const cleanText = extractEmojiAndSet(latestAIMessage.text);
+      setLastAIText(latestAIMessage.text);
+      // Optionally store cleaned text somewhere if needed
+    }
+  }, [messages]);
+
+  const extractEmojiAndSet = (text: string) => {
+    const match = text.match(/^[\p{Emoji_Presentation}\p{Emoji}\uFE0F]+/u);
+    const emoji = match ? match[0] : "🙂";
+    animateEmojiChange(() => setCurrentEmoji(emoji));
+    return text.replace(emoji, "").trim();
+  };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: (evt, gestureState) => {
+        // Only capture if starting from left edge
+        return evt.nativeEvent.locationX < 30;
+      },
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        // Only capture if starting from left edge and moving right
+        return evt.nativeEvent.locationX < 30 && gestureState.dx > 5;
+      },
+      onPanResponderMove: (_, gestureState) => {
+        // Optional: Add visual feedback for swipe
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx > 20) {
+          setSidebarVisible(true);
+        }
+      },
+      onPanResponderTerminate: () => {},
+      onPanResponderReject: () => {},
+      onShouldBlockNativeResponder: () => false, // Allow other components to respond
+    })
+  ).current;
+
+  // Also add this useEffect to handle back button/gesture
+  useEffect(() => {
+    const backAction = () => {
+      if (sidebarVisible) {
+        setSidebarVisible(false);
+        return true;
+      }
+      return false;
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      "hardwareBackPress",
+      backAction
+    );
+
+    return () => backHandler.remove();
+  }, [sidebarVisible]);
 
   // Main initialization effect
   useEffect(() => {
@@ -77,7 +143,9 @@ const Chat = () => {
   // Track if current chat is today's
   useEffect(() => {
     const todayStr = getTodayDateString();
-    const currentChat = chats.find((chat: any) => chat.chatId === currentChatId);
+    const currentChat = chats.find(
+      (chat: any) => chat.chatId === currentChatId
+    );
     setIsTodayChat(currentChat?.date === todayStr);
   }, [currentChatId, chats]);
 
@@ -109,6 +177,9 @@ const Chat = () => {
 
   const handleSendMessage = async (messageText: string) => {
     if (!messageText.trim()) return;
+
+    const friendlyPrompt = transformUserMessage(messageText);
+
     if (!currentChatId) {
       setIsCreatingChat(true);
       try {
@@ -144,7 +215,10 @@ const Chat = () => {
   if (!user) return <Redirect href="/signin" />;
 
   return (
-    <View style={{ flex: 1, backgroundColor: themeColors.background }}>
+    <View
+      style={{ flex: 1, backgroundColor: themeColors.background }}
+      {...panResponder.panHandlers}
+    >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
@@ -190,8 +264,17 @@ const Chat = () => {
                 keyExtractor={(item) => item.id}
                 renderItem={({ item }) => (
                   <ChatBubble
-                    text={item.text}
-                    role={item.role === "user" ? "user" : "ai"}
+                    text={
+                      item.role === "ai"
+                        ? item.text
+                            .replace(
+                              /^[\p{Emoji_Presentation}\p{Emoji}\uFE0F]+/u,
+                              ""
+                            )
+                            .trim()
+                        : item.text
+                    }
+                    role={item.role}
                   />
                 )}
                 contentContainerStyle={styles.listContent}
@@ -268,6 +351,15 @@ const styles = StyleSheet.create({
     backgroundColor: theme.colors.primaryColor,
     borderRadius: 8,
     alignSelf: "center",
+  },
+  edgeSwipeDetector: {
+    position: "absolute",
+    left: 0,
+    top: 0,
+    bottom: 0,
+    width: 20, // Very thin strip
+    zIndex: 100,
+    // backgroundColor: 'transparent' // Keep it invisible
   },
 });
 

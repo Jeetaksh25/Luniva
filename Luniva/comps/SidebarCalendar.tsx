@@ -8,15 +8,25 @@ import {
   Dimensions,
   FlatList,
   useColorScheme,
+  PanResponder,
+  Modal,
+  TouchableWithoutFeedback,
 } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
 import { useStore } from "@/store/useAppStore";
 import { theme } from "@/theme/theme";
 import { darkenColor } from "@/functions/darkenColor";
-import { getTodayDateString, isToday, isPastDate, isFutureDate } from "@/utils/dateUtils";
+import {
+  getTodayDateString,
+  isToday,
+  isPastDate,
+  isFutureDate,
+} from "@/utils/dateUtils";
+import * as Haptics from "expo-haptics";
 
 const { width } = Dimensions.get("window");
 const SIDEBAR_WIDTH = width * 0.8;
+const SWIPE_THRESHOLD = 50;
 
 const DAY_MARGIN = 2;
 const NUM_COLUMNS = 7;
@@ -47,12 +57,10 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
 
   const { user, currentDate } = useStore();
 
-  /** Setup streak when user data updates */
   useEffect(() => {
     setStreak(user?.dailyStreak || 0);
   }, [user]);
 
-  /** Load chats for current month and calculate first chat date */
   useEffect(() => {
     const today = new Date();
     setMonth(today.getMonth());
@@ -61,22 +69,61 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
     calculateFirstChatDate();
   }, [currentDate]);
 
-  /** Debug only in development */
-  useEffect(() => {
-    if (__DEV__) {
-      console.log("📋 Initial date debug:", useStore.getState().debugDateInfo());
-      useStore.getState().debugChats();
-      useStore.getState().debugAugust31Chat();
-    }
-  }, []);
+  const panResponder = PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onMoveShouldSetPanResponder: (_, gestureState) => {
+      return Math.abs(gestureState.dx) > 5;
+    },
+    onPanResponderMove: (_, gestureState) => {
+      if (gestureState.dx > 0) {
+        // Swiping right to close - move the sidebar
+        translateX.setValue(Math.min(0, -SIDEBAR_WIDTH + gestureState.dx));
+      }
+    },
+    onPanResponderRelease: (_, gestureState) => {
+      if (gestureState.dx > SWIPE_THRESHOLD) {
+        // Swiped right enough to close
+        closeSidebar();
+      } else {
+        // Not enough swipe, return to open position
+        Animated.spring(translateX, {
+          toValue: 0,
+          useNativeDriver: true,
+          friction: 8,
+          tension: 40,
+        }).start();
+      }
+    },
+    onPanResponderTerminate: () => {
+      Animated.spring(translateX, {
+        toValue: 0,
+        useNativeDriver: true,
+        friction: 8,
+        tension: 40,
+      }).start();
+    },
+    // CRITICAL: Allow the panResponder to work alongside other touchables
+    onPanResponderTerminationRequest: () => false,
+  });
 
-  /** Slide animation */
-  useEffect(() => {
+  const closeSidebar = () => {
     Animated.timing(translateX, {
-      toValue: visible ? 0 : -SIDEBAR_WIDTH,
+      toValue: -SIDEBAR_WIDTH,
       duration: 300,
       useNativeDriver: true,
-    }).start();
+    }).start(() => {
+      onClose();
+    });
+  };
+
+  useEffect(() => {
+    if (visible) {
+      Animated.timing(translateX, {
+        toValue: 0,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+    }
   }, [visible]);
 
   /** Calculate first chat date */
@@ -117,101 +164,160 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
     const itemDate = new Date(item.date);
     const isPastItem = isPastDate(item.date);
     const hasMessages = item.status === "done";
-  
+
     let borderColor = theme.colors.secondaryColor;
     let backgroundColor = "transparent";
     let textColor = themeColors.text;
     let opacity = 1;
-  
+
     // Determine status - FIXED logic
     if (hasMessages) {
       borderColor = theme.colors.successColor;
     } else if (isPastItem && !hasMessages) {
       borderColor = theme.colors.errorColor;
     }
-  
+
     if (isTodayItem) {
       backgroundColor = theme.colors.infoColor + "40";
       borderColor = theme.colors.infoColor;
       textColor = theme.colors.infoColor;
     }
-  
+
     if (!hasMessages && !isTodayItem) {
       opacity = 0.6;
     }
-  
+
+    const handleDayPress = () => {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+      if (hasMessages) {
+        openDailyChat(item.date);
+        closeSidebar();
+      }
+    };
+
     return (
       <TouchableOpacity
-        style={[styles.dayBox, { borderColor, backgroundColor, width: dayBoxSize, height: dayBoxSize, opacity }]}
-        onPress={() => hasMessages && openDailyChat(item.date)}
+        style={[
+          styles.dayBox,
+          {
+            borderColor,
+            backgroundColor,
+            width: dayBoxSize,
+            height: dayBoxSize,
+            opacity,
+          },
+        ]}
+        onPress={handleDayPress}
         disabled={!hasMessages}
       >
-        <Text style={{ color: textColor, fontWeight: isTodayItem ? "bold" : "normal" }}>
+        <Text
+          style={{
+            color: textColor,
+            fontWeight: isTodayItem ? "bold" : "normal",
+          }}
+        >
           {itemDate.getDate()}
         </Text>
-        {isTodayItem && <Text style={[styles.todayIndicator, { color: textColor }]}>Today</Text>}
+        {isTodayItem && (
+          <Text style={[styles.todayIndicator, { color: textColor }]}>
+            Today
+          </Text>
+        )}
       </TouchableOpacity>
     );
   };
 
+  if (!visible) return null;
+
   return (
-    <Animated.View
-      style={[
-        styles.sidebar,
-        { transform: [{ translateX }] },
-        { backgroundColor: darkenColor(themeColors.background, 10) },
-      ]}
+    <Modal
+      transparent={true}
+      visible={visible}
+      animationType="none"
+      onRequestClose={closeSidebar}
     >
-      {/* Streak Display */}
-      <View
-        style={[
-          styles.streakContainer,
-          { backgroundColor: theme.colors.warningColor + "20" },
-        ]}
-      >
-        <Text style={[styles.streakText, { color: theme.colors.warningColor }]}>
-          🔥 {streak} day streak
-        </Text>
-        <Text style={[styles.streakSubtext, { color: themeColors.text }]}>
-          {streak > 0 ? "Keep it going!" : "Start your streak today!"}
-        </Text>
-      </View>
+      <TouchableWithoutFeedback onPress={closeSidebar}>
+        <View style={styles.modalOverlay}>
+          <TouchableWithoutFeedback>
+            <Animated.View
+              style={[
+                styles.sidebar,
+                { transform: [{ translateX }] },
+                { backgroundColor: darkenColor(themeColors.background, 10) },
+              ]}
+              {...panResponder.panHandlers}
+            >
+              {/* Streak Display */}
+              <View
+                style={[
+                  styles.streakContainer,
+                  { backgroundColor: theme.colors.warningColor + "20" },
+                ]}
+              >
+                <Text
+                  style={[
+                    styles.streakText,
+                    { color: theme.colors.warningColor },
+                  ]}
+                >
+                  🔥 {streak} day streak
+                </Text>
+                <Text
+                  style={[styles.streakSubtext, { color: themeColors.text }]}
+                >
+                  {streak > 0 ? "Keep it going!" : "Start your streak today!"}
+                </Text>
+              </View>
 
-      {/* Calendar Header */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => setMonth((m) => (m === 0 ? (setYear((y) => y - 1), 11) : m - 1))}
-        >
-          <Feather name="chevron-left" size={24} color={themeColors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerText, { color: themeColors.text }]}>
-          {new Date(year, month).toLocaleString("default", { month: "long" })}{" "}
-          {year}
-        </Text>
-        <TouchableOpacity
-          onPress={() => setMonth((m) => (m === 11 ? (setYear((y) => y + 1), 0) : m + 1))}
-        >
-          <Feather name="chevron-right" size={24} color={themeColors.text} />
-        </TouchableOpacity>
-      </View>
+              {/* Calendar Header */}
+              <View style={styles.header}>
+                <TouchableOpacity
+                  onPress={() =>
+                    setMonth((m) =>
+                      m === 0 ? (setYear((y) => y - 1), 11) : m - 1
+                    )
+                  }
+                >
+                  <Feather
+                    name="chevron-left"
+                    size={24}
+                    color={themeColors.text}
+                  />
+                </TouchableOpacity>
+                <Text style={[styles.headerText, { color: themeColors.text }]}>
+                  {new Date(year, month).toLocaleString("default", {
+                    month: "long",
+                  })}{" "}
+                  {year}
+                </Text>
+                <TouchableOpacity
+                  onPress={() =>
+                    setMonth((m) =>
+                      m === 11 ? (setYear((y) => y + 1), 0) : m + 1
+                    )
+                  }
+                >
+                  <Feather
+                    name="chevron-right"
+                    size={24}
+                    color={themeColors.text}
+                  />
+                </TouchableOpacity>
+              </View>
 
-      {/* Calendar Grid */}
-      <FlatList
-        data={days}
-        renderItem={renderDay}
-        keyExtractor={(item) => item.date}
-        numColumns={7}
-        contentContainerStyle={styles.grid}
-      />
-
-      {/* Close Button */}
-      <TouchableOpacity
-        style={[styles.closeBtn, { backgroundColor: theme.colors.secondaryColor }]}
-        onPress={onClose}
-      >
-        <Text style={{ color: "#fff" }}>Close</Text>
-      </TouchableOpacity>
-    </Animated.View>
+              {/* Calendar Grid */}
+              <FlatList
+                data={days}
+                renderItem={renderDay}
+                keyExtractor={(item) => item.date}
+                numColumns={7}
+                contentContainerStyle={styles.grid}
+              />
+            </Animated.View>
+          </TouchableWithoutFeedback>
+        </View>
+      </TouchableWithoutFeedback>
+    </Modal>
   );
 };
 
@@ -221,11 +327,11 @@ const styles = StyleSheet.create({
   sidebar: {
     position: "absolute",
     left: 0,
-    bottom: 0,
+    top: 0,
     width: SIDEBAR_WIDTH,
     padding: 10,
     zIndex: 10,
-    height: "95%",
+    height: "100%",
   },
   streakContainer: {
     alignItems: "center",
@@ -271,5 +377,9 @@ const styles = StyleSheet.create({
     fontSize: 8,
     position: "absolute",
     bottom: 0,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
 });

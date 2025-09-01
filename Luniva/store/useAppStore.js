@@ -21,6 +21,7 @@ import {
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { getTodayDateString, isToday } from "@/utils/dateUtils";
+import { transformUserMessage } from "@/utils/transformPrompt";
 
 const API_KEY = "AIzaSyApCBdx6xDwRZhWFEqT7CsGwnvp1mkVEhg";
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
@@ -144,7 +145,7 @@ export const useStore = create((set, get) => ({
           contents: [
             {
               role: "user",
-              parts: [{ text }],
+              parts: [{ text: transformUserMessage(text) }],
             },
           ],
         }),
