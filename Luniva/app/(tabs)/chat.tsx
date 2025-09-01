@@ -91,7 +91,7 @@ const Chat = () => {
 
       const match = latestAI.text.trim().match(/^(\p{Emoji}|\p{Extended_Pictographic})/u);
       const emoji = match ? match[0] : "🙂";
-      
+
       fadeAnim.stopAnimation?.();
       Animated.timing(fadeAnim, {
         toValue: 0,
@@ -294,6 +294,17 @@ const Chat = () => {
             >
               {currentEmoji}
             </Text>
+            {isAiTyping && (
+              <Text
+                style={{
+                  textAlign: "center",
+                  color: themeColors.text,
+                  marginBottom: 8,
+                }}
+              >
+                {typingText}
+              </Text>
+            )}
           </Animated.View>
 
           <View style={{ flex: 1 }}>
@@ -332,17 +343,6 @@ const Chat = () => {
                   flatListRef.current?.scrollToEnd({ animated: true })
                 }
               />
-            )}
-            {isAiTyping && (
-              <Text
-                style={{
-                  textAlign: "center",
-                  color: themeColors.text,
-                  marginBottom: 8,
-                }}
-              >
-                {typingText}
-              </Text>
             )}
           </View>
 
