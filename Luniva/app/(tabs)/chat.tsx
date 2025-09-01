@@ -25,12 +25,12 @@ import { useRouter, Redirect } from "expo-router";
 import { useDateChange } from "@/utils/useDateChange";
 import { getTodayDateString } from "@/utils/dateUtils";
 import { transformUserMessage } from "@/utils/transformPrompt";
+import * as Haptics from "expo-haptics";
 
 const { width } = Dimensions.get("window");
 const SWIPE_THRESHOLD = 50;
 
 const Chat = () => {
-  const [input, setInput] = useState("");
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   const colorScheme = useColorScheme();
@@ -43,6 +43,11 @@ const Chat = () => {
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [lastAIText, setLastAIText] = useState("");
 
+  const [typingText, setTypingText] = useState("Typing…");
+  const typingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const lastAiIdRef = useRef<string | null>(null);
+
   const {
     messages,
     sendMessage,
@@ -51,6 +56,7 @@ const Chat = () => {
     chats,
     user,
     handleDateChange,
+    isAiTyping,
   } = useStore();
   const [isTodayChat, setIsTodayChat] = useState(true);
   const router = useRouter();
@@ -58,14 +64,51 @@ const Chat = () => {
   useDateChange((newDate: string) => handleDateChange(newDate));
 
   useEffect(() => {
-    const latestAIMessage = messages.findLast((m: any) => m.role === "ai");
-    if (latestAIMessage && latestAIMessage.text !== lastAIText) {
-      const cleanText = extractEmojiAndSet(latestAIMessage.text);
-      setLastAIText(latestAIMessage.text);
-      // Optionally store cleaned text somewhere if needed
+    if (isAiTyping) {
+      let i = 0;
+      if (typingTimerRef.current) clearInterval(typingTimerRef.current);
+      typingTimerRef.current = setInterval(() => {
+        i = (i + 1) % 3;
+        setTypingText(`Typing${".".repeat(i + 1)}`);
+      }, 450);
+    } else {
+      if (typingTimerRef.current) clearInterval(typingTimerRef.current);
+      setTypingText("Typing…");
     }
-  }, [messages]);
+    return () => {
+      if (typingTimerRef.current) clearInterval(typingTimerRef.current);
+    };
+  }, [isAiTyping]);
 
+  useEffect(() => {
+    const latestAI = [...messages].reverse().find((m: any) => m.role === "ai");
+    if (!latestAI) return;
+
+    // Trigger when either ID or text changes
+    if (latestAI.id !== lastAiIdRef.current || latestAI.text !== lastAIText) {
+      lastAiIdRef.current = latestAI.id;
+      setLastAIText(latestAI.text);
+
+      const match = latestAI.text.trim().match(/^(\p{Emoji}|\p{Extended_Pictographic})/u);
+      const emoji = match ? match[0] : "🙂";
+      
+      fadeAnim.stopAnimation?.();
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 150,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start(() => {
+        setCurrentEmoji(emoji);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 150,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }).start();
+      });
+    }
+  }, [messages, isAiTyping]);
   const extractEmojiAndSet = (text: string) => {
     const match = text.match(/^[\p{Emoji_Presentation}\p{Emoji}\uFE0F]+/u);
     const emoji = match ? match[0] : "🙂";
@@ -243,7 +286,14 @@ const Chat = () => {
           />
 
           <Animated.View style={[styles.emojiContainer, { opacity: fadeAnim }]}>
-            <Text style={styles.emoji}>{currentEmoji}</Text>
+            <Text
+              style={styles.emoji}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+              }}
+            >
+              {currentEmoji}
+            </Text>
           </Animated.View>
 
           <View style={{ flex: 1 }}>
@@ -282,6 +332,17 @@ const Chat = () => {
                   flatListRef.current?.scrollToEnd({ animated: true })
                 }
               />
+            )}
+            {isAiTyping && (
+              <Text
+                style={{
+                  textAlign: "center",
+                  color: themeColors.text,
+                  marginBottom: 8,
+                }}
+              >
+                {typingText}
+              </Text>
             )}
           </View>
 

@@ -13,7 +13,7 @@ export default function ChatBubble({ text, role }: { text: string; role: string 
 const styles = StyleSheet.create({
   bubble: {
     padding: 12,
-    marginVertical: 5,
+    marginVertical: 10,
     maxWidth: "70%",
     alignSelf: "flex-start",
   },

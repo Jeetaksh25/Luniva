@@ -35,6 +35,7 @@ export const useStore = create((set, get) => ({
   loadingAuth: true,
   loadingChat: false,
   currentDate: getTodayDateString(),
+  isAiTyping: false,
 
   initAuth: () => {
     return new Promise((resolve) => {
@@ -137,6 +138,7 @@ export const useStore = create((set, get) => ({
       // Save user message first
       await sendUserMessage(user.uid, currentChatId, text);
 
+      set({ isAiTyping: true });
       // Use Gemini API
       const response = await fetch(API_URL, {
         method: "POST",
@@ -180,6 +182,8 @@ export const useStore = create((set, get) => ({
         currentChatId,
         "Sorry, I encountered an error. Please try again."
       );
+    } finally {
+      set({ isAiTyping: false });
     }
   },
 
