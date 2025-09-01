@@ -6,6 +6,7 @@ import {
   serverTimestamp 
 } from "firebase/firestore";
 import { db } from "./config";
+import { getTodayDateString,isToday, isPastDate, isFutureDate } from "@/utils/dateUtils";
 
 export async function ensureUserDoc(user, { username = null } = {}) {
   try {
@@ -17,8 +18,8 @@ export async function ensureUserDoc(user, { username = null } = {}) {
       email: user.email ?? "",
       photoURL: user.photoURL ?? null,
       username: username ?? (user.displayName?.toLowerCase()?.replace(/\s+/g, '') ?? ""),
-      createdAt: serverTimestamp(), // ✅ WITH parentheses
-      lastLogin: serverTimestamp(), // ✅ WITH parentheses
+      createdAt: serverTimestamp(),
+      lastLogin: serverTimestamp(),
       dailyStreak: 0,
       streakUpdatedOn: null,
     };
@@ -64,30 +65,42 @@ export async function updateUserStreak(uid, chatDate) {
     }
 
     const userData = userSnap.data();
-    const today = getTodayDateString(); // Use the corrected function
-    
-    // Convert lastStreakUpdate to date string if it's a timestamp
+    const today = getTodayDateString();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+    // Convert lastStreakUpdate to date string
     let lastStreakUpdate = userData.streakUpdatedOn;
     if (lastStreakUpdate && lastStreakUpdate.toDate) {
       lastStreakUpdate = lastStreakUpdate.toDate().toISOString().split('T')[0];
-    } else if (lastStreakUpdate && lastStreakUpdate.seconds) {
-      lastStreakUpdate = new Date(lastStreakUpdate.seconds * 1000).toISOString().split('T')[0];
+    } else if (lastStreakUpdate && typeof lastStreakUpdate === 'string') {
+      lastStreakUpdate = lastStreakUpdate.split('T')[0];
     }
+
+    console.log("Today:", today, "Chat date:", chatDate, "Last update:", lastStreakUpdate);
     
-    console.log("Today:", today, "Last update:", lastStreakUpdate, "Current streak:", userData.dailyStreak);
-    
-    // Only update streak if this is today's chat and streak hasn't been updated today
-    if (chatDate === today && lastStreakUpdate !== today) {
+    // Only update streak if:
+    // 1. This is today's chat OR yesterday's chat (in case user chats after midnight)
+    // 2. AND streak hasn't been updated today
+    // 3. AND the chat has meaningful content (not just system messages)
+    if ((chatDate === today || chatDate === yesterdayStr) && 
+        lastStreakUpdate !== today) {
+      
       const newStreak = (userData.dailyStreak || 0) + 1;
       await updateDoc(userRef, {
         dailyStreak: newStreak,
         streakUpdatedOn: serverTimestamp()
       });
+      
       console.log("✅ Streak updated to:", newStreak);
+      return newStreak;
     } else {
       console.log("❌ Streak not updated - conditions not met");
+      return userData.dailyStreak || 0;
     }
   } catch (error) {
     console.error("Error updating streak:", error);
+    throw error;
   }
 }

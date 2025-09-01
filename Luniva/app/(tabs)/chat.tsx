@@ -3,7 +3,6 @@ import {
   View,
   Text,
   FlatList,
-  TextInput,
   TouchableOpacity,
   StyleSheet,
   KeyboardAvoidingView,
@@ -15,14 +14,13 @@ import {
 import MessageInput from "@/comps/MessageInput";
 import { useColorScheme } from "react-native";
 import { theme } from "@/theme/theme";
-import { Emojis } from "@/utils/emojis";
 import Feather from "@expo/vector-icons/Feather";
 import ChatBubble from "@/comps/ChatBubble";
 import SidebarCalendar from "@/comps/SidebarCalendar";
 import { useStore } from "@/store/useAppStore";
 import { useRouter, Redirect } from "expo-router";
 import { useDateChange } from "@/utils/useDateChange";
-import { getTodayDateString, isToday } from '@/utils/dateUtils';
+import { getTodayDateString } from "@/utils/dateUtils";
 
 const Chat = () => {
   const [input, setInput] = useState("");
@@ -46,118 +44,78 @@ const Chat = () => {
     user,
     handleDateChange,
   } = useStore();
-
   const [isTodayChat, setIsTodayChat] = useState(true);
-
   const router = useRouter();
 
-  useDateChange((newDate: string) => {
-    handleDateChange(newDate);
-  });
+  useDateChange((newDate: string) => handleDateChange(newDate));
 
+  // Main initialization effect
   useEffect(() => {
-    const todayStr = getTodayDateString(); // Use utility here
-    const currentChat = chats.find(
-      (chat: { chatId: string; date: string }) => chat.chatId === currentChatId
-    );
-    setIsTodayChat(currentChat?.date === todayStr);
-  }, [currentChatId, chats]);
-
-  useEffect(() => {
-    const checkAuth = async () => {
+    const init = async () => {
       const { user } = useStore.getState();
       if (!user) {
-        console.log("No user found, redirecting to signin");
         router.replace("/signin");
         return;
       }
-    };
 
-    checkAuth();
-  }, []);
-
-  if (!user) {
-    return <Redirect href="/signin" />;
-  }
-
-  // In your Chat component
-  useEffect(() => {
-    const { user } = useStore.getState();
-    if (!user) {
-      console.error("No authenticated user");
-      return;
-    }
-
-    const createChatIfNeeded = async () => {
+      // Ensure today's chat exists
       if (!currentChatId) {
         setIsCreatingChat(true);
         try {
           await useStore.getState().createTodayChat();
-          console.log("Today's chat created successfully");
-        } catch (error) {
-          console.error("Failed to create chat:", error);
+        } catch (err) {
+          console.error("Failed to create chat:", err);
         } finally {
           setIsCreatingChat(false);
         }
       }
     };
 
-    createChatIfNeeded();
-  }, []);
+    init();
+  }, [currentChatId]);
 
+  // Track if current chat is today's
   useEffect(() => {
     const todayStr = getTodayDateString();
-    const currentChat = chats.find(
-      (chat: { chatId: string; date: string }) => chat.chatId === currentChatId
-    );
+    const currentChat = chats.find((chat: any) => chat.chatId === currentChatId);
     setIsTodayChat(currentChat?.date === todayStr);
   }, [currentChatId, chats]);
 
+  // Load messages for current chat
   useEffect(() => {
-    // Create today's chat if it doesn't exist
-    const createChatIfNeeded = async () => {
-      if (!currentChatId) {
-        setIsCreatingChat(true);
-        try {
-          await useStore.getState().createTodayChat();
-          console.log("Today's chat created successfully");
-        } catch (error) {
-          console.error("Failed to create chat:", error);
-        } finally {
-          setIsCreatingChat(false);
-        }
-      }
-    };
+    if (!currentChatId) return;
+    const unsubscribe = loadMessages(currentChatId);
+    return () => unsubscribe && unsubscribe();
+  }, [currentChatId]);
 
-    createChatIfNeeded();
+  // Keyboard listeners
+  useEffect(() => {
+    const showSub = Keyboard.addListener("keyboardDidShow", () =>
+      setKeyboardVisible(true)
+    );
+    const hideSub = Keyboard.addListener("keyboardDidHide", () =>
+      setKeyboardVisible(false)
+    );
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
   }, []);
 
+  // Auto-scroll to latest message
   useEffect(() => {
-    if (!currentChatId) {
-      console.log("No current chat ID, skipping message loading");
-      return;
-    }
-
-    console.log("Loading messages for chat:", currentChatId);
-    const unsubscribe = loadMessages(currentChatId);
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [currentChatId, loadMessages]);
+    flatListRef.current?.scrollToEnd({ animated: true });
+  }, [messages]);
 
   const handleSendMessage = async (messageText: string) => {
-    if (messageText.trim().length === 0) return;
-
+    if (!messageText.trim()) return;
     if (!currentChatId) {
-      console.log("No chat ID available, creating chat first...");
       setIsCreatingChat(true);
       try {
         await useStore.getState().createTodayChat();
-        // Now send the message
         sendMessage(messageText);
-      } catch (error) {
-        console.error("Failed to create chat:", error);
+      } catch (err) {
+        console.error("Chat creation failed:", err);
       } finally {
         setIsCreatingChat(false);
       }
@@ -174,7 +132,6 @@ const Chat = () => {
       useNativeDriver: true,
     }).start(() => {
       onChangeEmoji();
-
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 300,
@@ -184,87 +141,13 @@ const Chat = () => {
     });
   };
 
-  useEffect(() => {
-    const showSub = Keyboard.addListener("keyboardDidShow", () => {
-      setKeyboardVisible(true);
-    });
-    const hideSub = Keyboard.addListener("keyboardDidHide", () => {
-      setKeyboardVisible(false);
-    });
-
-    return () => {
-      showSub.remove();
-      hideSub.remove();
-    };
-  }, []);
-
-  useEffect(() => {
-    if (flatListRef.current) {
-      flatListRef.current.scrollToEnd({ animated: true });
-    }
-  }, [messages]);
-
-  useEffect(() => {
-    const initializeChat = async () => {
-      const { user } = useStore.getState();
-      if (!user) {
-        console.error("No authenticated user");
-        return;
-      }
-  
-      const todayStr = new Date().toISOString().split("T")[0];
-      const { chats, currentChatId } = useStore.getState();
-      
-      // Check if we're already on today's chat
-      const currentChat = chats.find((chat: { date: string; chatId: string | null; status: string }) => 
-        chat.chatId === currentChatId
-      );
-      const isOnTodayChat = currentChat?.date === todayStr;
-  
-      if (!isOnTodayChat) {
-        setIsCreatingChat(true);
-        try {
-          await useStore.getState().createTodayChat();
-          console.log("Switched to today's chat");
-        } catch (error) {
-          console.error("Failed to switch to today's chat:", error);
-        } finally {
-          setIsCreatingChat(false);
-        }
-      }
-    };
-  
-    initializeChat();
-  }, []);
-
-  useEffect(() => {
-    const todayStr = getTodayDateString(); // Use utility here
-    const currentChat = chats.find(
-      (chat: { chatId: string; date: string }) => chat.chatId === currentChatId
-    );
-    setIsTodayChat(currentChat?.date === todayStr);
-  }, [currentChatId, chats]);
-
-  useEffect(() => {
-    if (!currentChatId) {
-      console.log("No current chat ID, skipping message loading");
-      return;
-    }
-  
-    console.log("Loading messages for chat:", currentChatId);
-    const unsubscribe = loadMessages(currentChatId);
-  
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [currentChatId, loadMessages]);
+  if (!user) return <Redirect href="/signin" />;
 
   return (
     <View style={{ flex: 1, backgroundColor: themeColors.background }}>
       <KeyboardAvoidingView
         style={{ flex: 1 }}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={0}
         enabled={keyboardVisible}
       >
         <View
@@ -284,6 +167,7 @@ const Chat = () => {
             visible={sidebarVisible}
             onClose={() => setSidebarVisible(false)}
           />
+
           <Animated.View style={[styles.emojiContainer, { opacity: fadeAnim }]}>
             <Text style={styles.emoji}>{currentEmoji}</Text>
           </Animated.View>
@@ -311,9 +195,9 @@ const Chat = () => {
                   />
                 )}
                 contentContainerStyle={styles.listContent}
-                onContentSizeChange={() => {
-                  flatListRef.current?.scrollToEnd({ animated: true });
-                }}
+                onContentSizeChange={() =>
+                  flatListRef.current?.scrollToEnd({ animated: true })
+                }
               />
             )}
           </View>
@@ -324,15 +208,13 @@ const Chat = () => {
             </View>
           )}
 
-          {currentChatId && isTodayChat && (
+          {currentChatId && isTodayChat ? (
             <MessageInput
               placeholder="Type a message"
               onSend={handleSendMessage}
               disable={isCreatingChat}
             />
-          )}
-
-          {currentChatId && !isTodayChat && (
+          ) : (
             <View style={styles.readOnlyOverlay}>
               <Text style={{ color: themeColors.text, textAlign: "center" }}>
                 📖 This chat is from a previous date. You can only view
@@ -340,10 +222,7 @@ const Chat = () => {
               </Text>
               <TouchableOpacity
                 style={styles.todayButton}
-                onPress={() => {
-                  // Switch to today's chat
-                  useStore.getState().createTodayChat();
-                }}
+                onPress={() => useStore.getState().createTodayChat()}
               >
                 <Text style={{ color: "#fff" }}>Go to Today's Chat</Text>
               </TouchableOpacity>
@@ -363,18 +242,9 @@ const styles = StyleSheet.create({
     paddingTop: 40,
     paddingBottom: 10,
   },
-  listContent: {
-    paddingHorizontal: 20,
-    paddingVertical: 5,
-    flexGrow: 1,
-  },
   emoji: { fontSize: 80 },
-  menuIcon: {
-    position: "absolute",
-    top: 60,
-    left: 20,
-    zIndex: 1,
-  },
+  listContent: { paddingHorizontal: 20, paddingVertical: 5, flexGrow: 1 },
+  menuIcon: { position: "absolute", top: 60, left: 20, zIndex: 1 },
   creatingChatOverlay: {
     position: "absolute",
     top: 0,
@@ -397,7 +267,7 @@ const styles = StyleSheet.create({
     padding: 10,
     backgroundColor: theme.colors.primaryColor,
     borderRadius: 8,
-    alignSelf: 'center',
+    alignSelf: "center",
   },
 });
 

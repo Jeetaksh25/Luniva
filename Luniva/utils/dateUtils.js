@@ -1,38 +1,36 @@
+// In dateUtils.ts - FIXED version
 export const getTodayDateString = () => {
-  // Get current date in LOCAL timezone
   const now = new Date();
+  // Use local date components instead of ISO string manipulation
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
   
-  // Adjust for timezone offset to get the correct local date
-  const timezoneOffset = now.getTimezoneOffset() * 60000; // offset in milliseconds
-  const localDate = new Date(now.getTime() - timezoneOffset);
-  
-  return localDate.toISOString().split('T')[0];
+  return `${year}-${month}-${day}`;
 };
-  
-  export const formatDateForDisplay = (dateString) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString(); // This will use the device's locale
-  };
-  
-  export const isToday = (dateString) => {
-    const today = getTodayDateString();
-    return today === dateString;
-  };
-  
-  export const getStartOfDay = (date = new Date()) => {
-    const newDate = new Date(date);
-    newDate.setHours(0, 0, 0, 0);
-    return newDate;
-  };
-  
-  export const getEndOfDay = (date = new Date()) => {
-    const newDate = new Date(date);
-    newDate.setHours(23, 59, 59, 999);
-    return newDate;
-  };
 
-  export const normalizeDate = (date) => {
-    const d = new Date(date);
-    d.setHours(0, 0, 0, 0);
-    return d;
-  };
+export const isToday = (dateString) => {
+  return getTodayDateString() === dateString;
+};
+
+export const isPastDate = (dateString) => {
+  const today = new Date(getTodayDateString());
+  const targetDate = new Date(dateString);
+  
+  // Reset both dates to midnight for accurate comparison
+  today.setHours(0, 0, 0, 0);
+  targetDate.setHours(0, 0, 0, 0);
+  
+  return targetDate < today;
+};
+
+export const isFutureDate = (dateString) => {
+  const today = new Date(getTodayDateString());
+  const targetDate = new Date(dateString);
+  
+  // Reset both dates to midnight for accurate comparison
+  today.setHours(0, 0, 0, 0);
+  targetDate.setHours(0, 0, 0, 0);
+  
+  return targetDate > today;
+};

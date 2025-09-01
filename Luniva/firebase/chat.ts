@@ -16,6 +16,7 @@ import {
 } from "firebase/firestore";
 import { db } from "./config";
 import { updateUserStreak } from "./user";
+import { getTodayDateString,isToday, isPastDate, isFutureDate } from "@/utils/dateUtils";
 
 // Create a new chat (no model or archived fields)
 export async function createChat(
@@ -99,15 +100,38 @@ export async function sendAIMessage(uid: string, chatId: string, text: string, e
       ...extra,
     });
 
+    // Update chat status to "done" only if we have both user and AI messages
+    const messagesCol = collection(db, "users", uid, "chats", chatId, "messages");
+    const messagesSnap = await getDocs(messagesCol);
+    
+    let hasUserMessage = false;
+    let hasAIMessage = false;
+    
+    messagesSnap.forEach((doc) => {
+      const message = doc.data();
+      if (message.role === "user" && message.text && message.text.trim().length > 0) {
+        hasUserMessage = true;
+      }
+      if (message.role === "ai" && message.text && message.text.trim().length > 0) {
+        hasAIMessage = true;
+      }
+    });
+
+    // Only mark as "done" if we have a complete conversation
+    const status = (hasUserMessage && hasAIMessage) ? "done" : "pending";
+
     await updateDoc(doc(db, "users", uid, "chats", chatId), {
       updatedAt: serverTimestamp(),
       lastMessage: text,
+      status: status,
     });
 
-    const chatDate = chatId; // Assuming chatId is the date string
-    await updateUserStreak(uid, chatDate);
+    const chatDate = chatId;
+    if (status === "done") {
+      await updateUserStreak(uid, chatDate);
+    }
     
-    console.log("AI message saved successfully");
+    console.log("AI message saved successfully, status:", status);
   } catch (error) {
     console.error("Error saving AI message:", error);
     throw error;
@@ -179,9 +203,21 @@ export async function checkChatHasMessages(uid: string, chatId: string): Promise
   try {
     const messagesCol = collection(db, "users", uid, "chats", chatId, "messages");
     const messagesSnap = await getDocs(messagesCol);
-    return messagesSnap.size > 0;
+    
+    // Check if there are any user or AI messages (not just empty collections)
+    let hasRealMessages = false;
+    messagesSnap.forEach((doc) => {
+      const message = doc.data();
+      // Check if message has meaningful content (not empty or system messages)
+      if (message.text && message.text.trim().length > 0) {
+        hasRealMessages = true;
+      }
+    });
+    
+    return hasRealMessages;
   } catch (error) {
     console.error("Error checking chat messages:", error);
+    // If there's an error (like collection doesn't exist), assume no messages
     return false;
   }
 }

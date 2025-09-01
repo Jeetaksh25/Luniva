@@ -20,8 +20,7 @@ import {
 } from "../firebase/chat";
 import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase/config";
-import { getTodayDateString, isToday } from '@/utils/dateUtils';
-
+import { getTodayDateString, isToday } from "@/utils/dateUtils";
 
 const API_KEY = "AIzaSyApCBdx6xDwRZhWFEqT7CsGwnvp1mkVEhg";
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
@@ -42,23 +41,26 @@ export const useStore = create((set, get) => ({
         if (user) {
           try {
             await ensureUserDoc(user);
-            
+
             const userRef = doc(db, "users", user.uid);
             const unsubscribeUser = onSnapshot(userRef, (doc) => {
               if (doc.exists()) {
                 const userData = doc.data();
-                console.log("🔥 User data updated - streak:", userData.dailyStreak);
+                console.log(
+                  "🔥 User data updated - streak:",
+                  userData.dailyStreak
+                );
                 set({ user: { ...user, ...userData } });
               }
             });
-  
+
             set({
               user,
               loadingAuth: false,
               unsubscribeUser,
               currentDate: getTodayDateString(), // Use the corrected function
             });
-  
+
             get().createTodayChat();
           } catch (error) {
             console.error("Error ensuring user doc:", error);
@@ -163,6 +165,10 @@ export const useStore = create((set, get) => ({
 
       console.log("AI Response:", aiText);
 
+      useStore
+        .getState()
+        .loadDailyChats(new Date().getMonth(), new Date().getFullYear());
+
       // Save AI message to Firestore
       await sendAIResponse(aiText);
     } catch (err) {
@@ -183,65 +189,106 @@ export const useStore = create((set, get) => ({
     const today = new Date();
     const currentMonth = month ?? today.getMonth();
     const currentYear = year ?? today.getFullYear();
-    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  
-    // Get ALL chats (not just this month) to catch August 31st
+    
+    // Get ALL chats regardless of month
     const allChats = await getAllUserChats(user.uid);
     
     const dailyChats = [];
+    const todayStr = getTodayDateString();
+    const todayDate = new Date(todayStr);
+    todayDate.setHours(0, 0, 0, 0);
+  
+    // Load dates for the current month PLUS any dates from previous months that have chats
+    const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
       
       const chatData = allChats[dateStr];
-      let chatId = chatData ? dateStr : null;
       let status = "upcoming";
+      const chatDate = new Date(dateStr);
+      chatDate.setHours(0, 0, 0, 0);
   
-      // Check if this chat has messages
-      if (chatId) {
+      // Check if this chat exists
+      if (chatData) {
         const hasMessages = await checkChatHasMessages(user.uid, dateStr);
         
         if (hasMessages) {
           status = "done";
-          console.log(`✅ ${dateStr}: HAS MESSAGES`);
-        } else {
-          const chatDate = new Date(dateStr);
-          chatDate.setHours(0, 0, 0, 0);
-          
-          const todayDate = new Date();
-          todayDate.setHours(0, 0, 0, 0);
-  
-          if (chatDate < todayDate) {
-            status = "missed";
-          } else if (chatDate.getTime() === todayDate.getTime()) {
-            status = "pending";
-          }
+        } else if (chatDate < todayDate) {
+          status = "missed";
+        } else if (chatDate.getTime() === todayDate.getTime()) {
+          status = "pending";
         }
+      } else if (chatDate < todayDate) {
+        status = "missed";
+      } else if (chatDate.getTime() === todayDate.getTime()) {
+        status = "pending";
       }
   
-      dailyChats.push({ date: dateStr, chatId, status });
+      dailyChats.push({ 
+        date: dateStr, 
+        chatId: chatData ? dateStr : null, 
+        status 
+      });
     }
   
+    // ADD THIS: Also include any chats from previous months that exist
+    Object.keys(allChats).forEach(async (dateStr) => {
+      // Skip if already included in current month
+      if (dailyChats.find(chat => chat.date === dateStr)) return;
+      
+      // Only include past dates that have messages
+      const chatDate = new Date(dateStr);
+      chatDate.setHours(0, 0, 0, 0);
+      
+      if (chatDate < todayDate) {
+        const hasMessages = await checkChatHasMessages(user.uid, dateStr);
+        if (hasMessages) {
+          dailyChats.push({
+            date: dateStr,
+            chatId: dateStr,
+            status: "done"
+          });
+        }
+      }
+    });
+  
+    console.log("📅 Loaded daily chats:", dailyChats);
     set({ chats: dailyChats });
   },
 
   openDailyChat: async (date) => {
     const { user, loadMessages } = get();
     if (!user) return;
-    
+
     try {
       console.log("Opening daily chat for date:", date);
-      const chatId = await getOrCreateDailyChat(user.uid, date);
-      console.log("Got chat ID:", chatId);
-      
+
+      // First check if chat exists
+      const chatRef = doc(db, "users", user.uid, "chats", date);
+      const chatSnap = await getDoc(chatRef);
+
+      let chatId;
+      if (chatSnap.exists()) {
+        chatId = date;
+        console.log("Chat exists, using ID:", chatId);
+      } else {
+        // Create the chat if it doesn't exist but only for past dates with content
+        console.log("Chat doesn't exist, creating...");
+        chatId = await getOrCreateDailyChat(user.uid, date);
+      }
+
       set({ currentChatId: chatId });
-      
+
       // Load messages for this chat
       const unsubscribe = loadMessages(chatId);
-      
+
       return unsubscribe;
     } catch (error) {
       console.error("Error opening daily chat:", error);
+      // Show error to user
+      Alert.alert("Error", "Could not open chat for this date");
     }
   },
 
@@ -276,12 +323,12 @@ export const useStore = create((set, get) => ({
       return;
     }
 
-    const todayStr = getTodayDateString(); // Use utility here
+    const todayStr = getTodayDateString();
     console.log("🔄 Creating/ensuring chat for today:", todayStr);
 
     try {
       const newChatId = await getOrCreateDailyChat(user.uid, todayStr);
-      
+
       const { chats } = get();
       const existingChatIndex = chats.findIndex((c) => c.date === todayStr);
 
@@ -291,7 +338,7 @@ export const useStore = create((set, get) => ({
         updatedChats[existingChatIndex] = {
           date: todayStr,
           chatId: newChatId,
-          status: "pending",
+          status: "pending", // Start as pending, will update when messages are sent
         };
       } else {
         updatedChats = [
@@ -381,55 +428,62 @@ export const useStore = create((set, get) => ({
   debugChats: async () => {
     const { user } = get();
     if (!user) return;
-    
+
     console.log("🔍 DEBUG: Checking all chats");
     const chatsCol = collection(db, "users", user.uid, "chats");
     const snap = await getDocs(chatsCol);
-    
+
     snap.forEach((doc) => {
       console.log(`Chat ${doc.id}:`, doc.data());
     });
   },
   // Add to your store
-debugAllChats: async () => {
-  const { user } = get();
-  if (!user) return;
-  
-  console.log("🔍 DEBUG: All user chats");
-  const chatsCol = collection(db, "users", user.uid, "chats");
-  const snap = await getDocs(chatsCol);
-  
-  const allChats = [];
-  snap.forEach((doc) => {
-    allChats.push({ id: doc.id, data: doc.data() });
-  });
-  
-  console.log("All chats:", allChats);
-  return allChats;
-},
+  debugAllChats: async () => {
+    const { user } = get();
+    if (!user) return;
 
-// Add this to your store
-debugAugust31Chat: async () => {
-  const { user } = get();
-  if (!user) return;
-  
-  console.log("🔍 DEBUG: Checking August 31st chat specifically");
-  const chatRef = doc(db, "users", user.uid, "chats", "2025-08-31");
-  const chatSnap = await getDoc(chatRef);
-  
-  if (chatSnap.exists()) {
-    console.log("✅ August 31st chat EXISTS:", chatSnap.data());
-    
-    // Check messages in this chat
-    const messagesCol = collection(db, "users", user.uid, "chats", "2025-08-31", "messages");
-    const messagesSnap = await getDocs(messagesCol);
-    console.log(`📨 August 31st has ${messagesSnap.size} messages`);
-    
-    messagesSnap.forEach((doc) => {
-      console.log("Message:", doc.data());
+    console.log("🔍 DEBUG: All user chats");
+    const chatsCol = collection(db, "users", user.uid, "chats");
+    const snap = await getDocs(chatsCol);
+
+    const allChats = [];
+    snap.forEach((doc) => {
+      allChats.push({ id: doc.id, data: doc.data() });
     });
-  } else {
-    console.log("❌ August 31st chat does NOT exist");
-  }
-},
+
+    console.log("All chats:", allChats);
+    return allChats;
+  },
+
+  // Add this to your store
+  debugAugust31Chat: async () => {
+    const { user } = get();
+    if (!user) return;
+
+    console.log("🔍 DEBUG: Checking August 31st chat specifically");
+    const chatRef = doc(db, "users", user.uid, "chats", "2025-08-31");
+    const chatSnap = await getDoc(chatRef);
+
+    if (chatSnap.exists()) {
+      console.log("✅ August 31st chat EXISTS:", chatSnap.data());
+
+      // Check messages in this chat
+      const messagesCol = collection(
+        db,
+        "users",
+        user.uid,
+        "chats",
+        "2025-08-31",
+        "messages"
+      );
+      const messagesSnap = await getDocs(messagesCol);
+      console.log(`📨 August 31st has ${messagesSnap.size} messages`);
+
+      messagesSnap.forEach((doc) => {
+        console.log("Message:", doc.data());
+      });
+    } else {
+      console.log("❌ August 31st chat does NOT exist");
+    }
+  },
 }));

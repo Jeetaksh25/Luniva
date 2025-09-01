@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import Feather from "@expo/vector-icons/Feather";
 import { useStore } from "@/store/useAppStore";
 import { theme } from "@/theme/theme";
 import { darkenColor } from "@/functions/darkenColor";
-import { getTodayDateString, isToday } from '@/utils/dateUtils';
+import { getTodayDateString, isToday, isPastDate, isFutureDate } from "@/utils/dateUtils";
 
 const { width } = Dimensions.get("window");
 const SIDEBAR_WIDTH = width * 0.8;
@@ -35,58 +35,42 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
   const [translateX] = useState(new Animated.Value(-SIDEBAR_WIDTH));
   const [month, setMonth] = useState(new Date().getMonth());
   const [year, setYear] = useState(new Date().getFullYear());
+  const [streak, setStreak] = useState(0);
+  const [firstChatDate, setFirstChatDate] = useState<Date | null>(null);
+
   const chats = useStore((s) => s.chats);
   const loadDailyChats = useStore((s) => s.loadDailyChats);
   const openDailyChat = useStore((s) => s.openDailyChat);
-  const getUserData = useStore((s) => s.getUserData);
   const colorScheme = useColorScheme();
   const themeColors =
     colorScheme === "dark" ? theme.darkTheme : theme.lightTheme;
 
   const { user, currentDate } = useStore();
-  const [streak, setStreak] = useState(0);
-  const [firstChatDate, setFirstChatDate] = useState<Date | null>(null);
 
+  /** Setup streak when user data updates */
   useEffect(() => {
-    if (user) {
-      console.log("📊 Current user streak:", user.dailyStreak);
-      setStreak(user.dailyStreak || 0);
-    }
+    setStreak(user?.dailyStreak || 0);
   }, [user]);
 
+  /** Load chats for current month and calculate first chat date */
   useEffect(() => {
     const today = new Date();
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
-
-    setMonth(currentMonth);
-    setYear(currentYear);
-    loadDailyChats(currentMonth, currentYear);
+    setMonth(today.getMonth());
+    setYear(today.getFullYear());
+    loadDailyChats(today.getMonth(), today.getFullYear());
     calculateFirstChatDate();
   }, [currentDate]);
 
-  // In your Chat component, add this
+  /** Debug only in development */
   useEffect(() => {
-    // Debug date info on component mount
-    const debugInfo = useStore.getState().debugDateInfo();
-    console.log("📋 Initial date debug:", debugInfo);
+    if (__DEV__) {
+      console.log("📋 Initial date debug:", useStore.getState().debugDateInfo());
+      useStore.getState().debugChats();
+      useStore.getState().debugAugust31Chat();
+    }
   }, []);
 
-  const calculateFirstChatDate = () => {
-    const doneChats = chats.filter((chat: any) => chat.status === "done");
-    if (doneChats.length > 0) {
-      // Find the earliest chat date
-      const earliestChat = doneChats.reduce((earliest: any, current: any) => {
-        return new Date(current.date) < new Date(earliest.date)
-          ? current
-          : earliest;
-      });
-      setFirstChatDate(new Date(earliestChat.date));
-    } else {
-      setFirstChatDate(null);
-    }
-  };
-
+  /** Slide animation */
   useEffect(() => {
     Animated.timing(translateX, {
       toValue: visible ? 0 : -SIDEBAR_WIDTH,
@@ -95,129 +79,77 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
     }).start();
   }, [visible]);
 
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  const days = Array.from({ length: daysInMonth }, (_, i) => {
-    const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(i + 1).padStart(2, "0")}`;
-    const chatData = chats.find(
-      (c: { date: string; status: string; chatId: string | null }) =>
-        c.date === dateStr
+  /** Calculate first chat date */
+  const calculateFirstChatDate = () => {
+    const doneChats = chats.filter((chat: any) => chat.status === "done");
+    if (doneChats.length === 0) {
+      setFirstChatDate(null);
+      return;
+    }
+    const earliest = doneChats.reduce((a: any, b: any) =>
+      new Date(a.date) < new Date(b.date) ? a : b
     );
-    return chatData || { date: dateStr, status: "upcoming", chatId: null };
-  });
-
-  const handlePrevMonth = () => {
-    setMonth((m) => {
-      if (m === 0) {
-        setYear((y) => y - 1);
-        return 11;
-      }
-      return m - 1;
-    });
+    setFirstChatDate(new Date(earliest.date));
   };
 
-  const handleNextMonth = () => {
-    setMonth((m) => {
-      if (m === 11) {
-        setYear((y) => y + 1);
-        return 0;
-      }
-      return m + 1;
+  /** Days of month (memoized) */
+  const days = useMemo(() => {
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    return Array.from({ length: daysInMonth }, (_, i) => {
+      const dateStr = `${year}-${String(month + 1).padStart(2, "0")}-${String(
+        i + 1
+      ).padStart(2, "0")}`;
+      return (
+        chats.find((c: any) => c.date === dateStr) || {
+          date: dateStr,
+          status: "upcoming",
+          chatId: null,
+        }
+      );
     });
-  };
+  }, [month, year, chats]);
 
-  useEffect(() => {
-    const today = new Date();
-    const currentMonth = today.getMonth();
-    const currentYear = today.getFullYear();
-  
-    setMonth(currentMonth);
-    setYear(currentYear);
-    loadDailyChats(currentMonth, currentYear);
-    calculateFirstChatDate();
-    
-    // Debug: check all chats
-    useStore.getState().debugChats();
-  }, [currentDate]);
-
-// In your SidebarCalendar or anywhere
-useEffect(() => {
-  useStore.getState().debugAugust31Chat();
-}, []);
-
+  /** Render day cell */
+  const todayStr = getTodayDateString();
   const renderDay = ({ item }: { item: any }) => {
     const todayStr = getTodayDateString();
     const isTodayItem = item.date === todayStr;
     const itemDate = new Date(item.date);
-    const currentDate = new Date();
-    
-    // Reset time part for proper date comparison
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    currentDate.setHours(0, 0, 0, 0);
-    itemDate.setHours(0, 0, 0, 0);
+    const isPastItem = isPastDate(item.date);
+    const hasMessages = item.status === "done";
   
     let borderColor = theme.colors.secondaryColor;
     let backgroundColor = "transparent";
     let textColor = themeColors.text;
     let opacity = 1;
   
-    // Determine colors based on the requirements
-    if (item.status === "done") {
-      // Chats with messages - successColor
+    // Determine status - FIXED logic
+    if (hasMessages) {
       borderColor = theme.colors.successColor;
-    } else if (itemDate < today && item.status !== "done") {
-      // Past dates without chats - errorColor
+    } else if (isPastItem && !hasMessages) {
       borderColor = theme.colors.errorColor;
-    } else {
-      // Future dates or upcoming chats - secondaryColor
-      borderColor = theme.colors.secondaryColor;
     }
   
-    // Today gets special styling
     if (isTodayItem) {
-      backgroundColor = theme.colors.infoColor + "40"; // Add transparency
+      backgroundColor = theme.colors.infoColor + "40";
       borderColor = theme.colors.infoColor;
       textColor = theme.colors.infoColor;
     }
   
-    // Dim future dates and non-clickable dates
-    if (itemDate > currentDate || item.status !== "done") {
+    if (!hasMessages && !isTodayItem) {
       opacity = 0.6;
     }
   
     return (
       <TouchableOpacity
-        style={[
-          styles.dayBox,
-          {
-            borderColor,
-            backgroundColor,
-            width: dayBoxSize,
-            height: dayBoxSize,
-            opacity,
-          },
-        ]}
-        onPress={() => {
-          // Only allow clicking on dates with completed chats
-          if (item.status !== "done") return;
-          openDailyChat(item.date);
-        }}
-        disabled={item.status !== "done"}
+        style={[styles.dayBox, { borderColor, backgroundColor, width: dayBoxSize, height: dayBoxSize, opacity }]}
+        onPress={() => hasMessages && openDailyChat(item.date)}
+        disabled={!hasMessages}
       >
-        <Text
-          style={{
-            color: textColor,
-            fontWeight: isTodayItem ? "bold" : "normal",
-          }}
-        >
+        <Text style={{ color: textColor, fontWeight: isTodayItem ? "bold" : "normal" }}>
           {itemDate.getDate()}
         </Text>
-        {isTodayItem && (
-          <Text style={[styles.todayIndicator, { color: textColor }]}>
-            Today
-          </Text>
-        )}
+        {isTodayItem && <Text style={[styles.todayIndicator, { color: textColor }]}>Today</Text>}
       </TouchableOpacity>
     );
   };
@@ -245,19 +177,25 @@ useEffect(() => {
         </Text>
       </View>
 
+      {/* Calendar Header */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={handlePrevMonth}>
+        <TouchableOpacity
+          onPress={() => setMonth((m) => (m === 0 ? (setYear((y) => y - 1), 11) : m - 1))}
+        >
           <Feather name="chevron-left" size={24} color={themeColors.text} />
         </TouchableOpacity>
         <Text style={[styles.headerText, { color: themeColors.text }]}>
           {new Date(year, month).toLocaleString("default", { month: "long" })}{" "}
           {year}
         </Text>
-        <TouchableOpacity onPress={handleNextMonth}>
+        <TouchableOpacity
+          onPress={() => setMonth((m) => (m === 11 ? (setYear((y) => y + 1), 0) : m + 1))}
+        >
           <Feather name="chevron-right" size={24} color={themeColors.text} />
         </TouchableOpacity>
       </View>
 
+      {/* Calendar Grid */}
       <FlatList
         data={days}
         renderItem={renderDay}
@@ -266,11 +204,9 @@ useEffect(() => {
         contentContainerStyle={styles.grid}
       />
 
+      {/* Close Button */}
       <TouchableOpacity
-        style={[
-          styles.closeBtn,
-          { backgroundColor: theme.colors.secondaryColor },
-        ]}
+        style={[styles.closeBtn, { backgroundColor: theme.colors.secondaryColor }]}
         onPress={onClose}
       >
         <Text style={{ color: "#fff" }}>Close</Text>
