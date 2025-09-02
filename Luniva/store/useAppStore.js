@@ -36,6 +36,7 @@ export const useStore = create((set, get) => ({
   loadingChat: false,
   currentDate: getTodayDateString(),
   isAiTyping: false,
+  unsubscribeMessages: null,
 
   initAuth: () => {
     return new Promise((resolve) => {
@@ -99,19 +100,26 @@ export const useStore = create((set, get) => ({
   },
 
   logout: async () => {
-    const { unsubscribeUser } = get();
-    if (unsubscribeUser) {
-      unsubscribeUser();
-    }
+    const { unsubscribeUser, unsubscribeMessages, unsubscribeChats } = get();
+
+    // ✅ cleanup all listeners
+    if (unsubscribeUser) unsubscribeUser();
+    if (unsubscribeMessages) unsubscribeMessages();
+    if (unsubscribeChats) unsubscribeChats();
+
     await signOut(auth);
+
     set({
       user: null,
       chats: [],
       messages: [],
       currentChatId: null,
       unsubscribeUser: null,
+      unsubscribeMessages: null,
+      unsubscribeChats: null,
     });
   },
+
   // --- CHATS ---
 
   // In your useStore
@@ -307,8 +315,18 @@ export const useStore = create((set, get) => ({
   loadMessages: (chatId) => {
     const { user } = get();
     if (!user) return;
-    set({ currentChatId: chatId });
-    return watchMessages(user.uid, chatId, (messages) => set({ messages }));
+
+    // Unsubscribe previous messages if any
+    if (get().unsubscribeMessages) {
+      get().unsubscribeMessages();
+    }
+
+    const unsubscribe = watchMessages(user.uid, chatId, (messages) =>
+      set({ messages })
+    );
+
+    set({ currentChatId: chatId, unsubscribeMessages: unsubscribe });
+    return unsubscribe;
   },
 
   // --- MESSAGING ---

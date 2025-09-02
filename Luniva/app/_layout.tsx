@@ -3,9 +3,10 @@ import { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { useColorScheme } from "react-native";
 import { theme } from "@/theme/theme";
-import { setupDateChangeListener } from '@/services/backgroundService';
+import { setupDateChangeListener } from "@/services/backgroundService";
+import ToastManager from "toastify-react-native";
 
-SplashScreen.preventAutoHideAsync();
+SplashScreen.preventAutoHideAsync().catch(() => {});
 
 export default function Layout() {
   const colorScheme = useColorScheme();
@@ -14,10 +15,9 @@ export default function Layout() {
 
   useEffect(() => {
     const prepare = async () => {
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 1500));
       await SplashScreen.hideAsync();
     };
-
     prepare();
   }, []);
 
@@ -27,9 +27,8 @@ export default function Layout() {
 
   return (
     <>
-      <StatusBar
-        style={colorScheme === "dark" ? "light" : "dark"}
-      />
+      <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
+      <ToastManager />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="profile/[id]" options={{ headerShown: false }} />

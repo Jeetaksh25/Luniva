@@ -18,16 +18,14 @@ import { theme } from "@/theme/theme";
 import { darkenColor } from "@/functions/darkenColor";
 import {
   getTodayDateString,
-  isToday,
   isPastDate,
-  isFutureDate,
 } from "@/utils/dateUtils";
 import * as Haptics from "expo-haptics";
+import { router } from "expo-router";
 
 const { width } = Dimensions.get("window");
 const SIDEBAR_WIDTH = width * 0.8;
 const SWIPE_THRESHOLD = 50;
-
 const DAY_MARGIN = 2;
 const NUM_COLUMNS = 7;
 const dayBoxSize =
@@ -55,7 +53,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
   const themeColors =
     colorScheme === "dark" ? theme.darkTheme : theme.lightTheme;
 
-  const { user, currentDate } = useStore();
+  const { user, currentDate, logout } = useStore();
 
   useEffect(() => {
     setStreak(user?.dailyStreak || 0);
@@ -76,16 +74,13 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
     },
     onPanResponderMove: (_, gestureState) => {
       if (gestureState.dx > 0) {
-        // Swiping right to close - move the sidebar
         translateX.setValue(Math.min(0, -SIDEBAR_WIDTH + gestureState.dx));
       }
     },
     onPanResponderRelease: (_, gestureState) => {
       if (gestureState.dx > SWIPE_THRESHOLD) {
-        // Swiped right enough to close
         closeSidebar();
       } else {
-        // Not enough swipe, return to open position
         Animated.spring(translateX, {
           toValue: 0,
           useNativeDriver: true,
@@ -102,7 +97,6 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
         tension: 40,
       }).start();
     },
-    // CRITICAL: Allow the panResponder to work alongside other touchables
     onPanResponderTerminationRequest: () => false,
   });
 
@@ -126,7 +120,6 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
     }
   }, [visible]);
 
-  /** Calculate first chat date */
   const calculateFirstChatDate = () => {
     const doneChats = chats.filter((chat: any) => chat.status === "done");
     if (doneChats.length === 0) {
@@ -139,7 +132,6 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
     setFirstChatDate(new Date(earliest.date));
   };
 
-  /** Days of month (memoized) */
   const days = useMemo(() => {
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     return Array.from({ length: daysInMonth }, (_, i) => {
@@ -156,8 +148,12 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
     });
   }, [month, year, chats]);
 
-  /** Render day cell */
-  const todayStr = getTodayDateString();
+  const handleLogout = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    logout();
+    router.replace("/");
+  };
+
   const renderDay = ({ item }: { item: any }) => {
     const todayStr = getTodayDateString();
     const isTodayItem = item.date === todayStr;
@@ -170,7 +166,6 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
     let textColor = themeColors.text;
     let opacity = 1;
 
-    // Determine status - FIXED logic
     if (hasMessages) {
       borderColor = theme.colors.successColor;
     } else if (isPastItem && !hasMessages) {
@@ -230,12 +225,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
   if (!visible) return null;
 
   return (
-    <Modal
-      transparent={true}
-      visible={visible}
-      animationType="none"
-      onRequestClose={closeSidebar}
-    >
+    <Modal transparent={true} visible={visible} animationType="none" onRequestClose={closeSidebar}>
       <TouchableWithoutFeedback onPress={closeSidebar}>
         <View style={styles.modalOverlay}>
           <TouchableWithoutFeedback>
@@ -247,42 +237,25 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
               ]}
               {...panResponder.panHandlers}
             >
-              {/* Streak Display */}
               <View
                 style={[
                   styles.streakContainer,
                   { backgroundColor: theme.colors.warningColor + "20" },
                 ]}
               >
-                <Text
-                  style={[
-                    styles.streakText,
-                    { color: theme.colors.warningColor },
-                  ]}
-                >
+                <Text style={[styles.streakText, { color: theme.colors.warningColor }]}>
                   🔥 {streak} day streak
                 </Text>
-                <Text
-                  style={[styles.streakSubtext, { color: themeColors.text }]}
-                >
+                <Text style={[styles.streakSubtext, { color: themeColors.text }]}>
                   {streak > 0 ? "Keep it going!" : "Start your streak today!"}
                 </Text>
               </View>
 
-              {/* Calendar Header */}
               <View style={styles.header}>
                 <TouchableOpacity
-                  onPress={() =>
-                    setMonth((m) =>
-                      m === 0 ? (setYear((y) => y - 1), 11) : m - 1
-                    )
-                  }
+                  onPress={() => setMonth((m) => (m === 0 ? (setYear((y) => y - 1), 11) : m - 1))}
                 >
-                  <Feather
-                    name="chevron-left"
-                    size={24}
-                    color={themeColors.text}
-                  />
+                  <Feather name="chevron-left" size={24} color={themeColors.text} />
                 </TouchableOpacity>
                 <Text style={[styles.headerText, { color: themeColors.text }]}>
                   {new Date(year, month).toLocaleString("default", {
@@ -291,21 +264,12 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                   {year}
                 </Text>
                 <TouchableOpacity
-                  onPress={() =>
-                    setMonth((m) =>
-                      m === 11 ? (setYear((y) => y + 1), 0) : m + 1
-                    )
-                  }
+                  onPress={() => setMonth((m) => (m === 11 ? (setYear((y) => y + 1), 0) : m + 1))}
                 >
-                  <Feather
-                    name="chevron-right"
-                    size={24}
-                    color={themeColors.text}
-                  />
+                  <Feather name="chevron-right" size={24} color={themeColors.text} />
                 </TouchableOpacity>
               </View>
 
-              {/* Calendar Grid */}
               <FlatList
                 data={days}
                 renderItem={renderDay}
@@ -313,6 +277,11 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                 numColumns={7}
                 contentContainerStyle={styles.grid}
               />
+
+              {/* Logout Button at Bottom */}
+              <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+                <Text style={[styles.logoutText, { color: themeColors.text }]}>Logout</Text>
+              </TouchableOpacity>
             </Animated.View>
           </TouchableWithoutFeedback>
         </View>
@@ -332,6 +301,7 @@ const styles = StyleSheet.create({
     padding: 10,
     zIndex: 10,
     height: "100%",
+    justifyContent: "space-between",
   },
   streakContainer: {
     alignItems: "center",
@@ -367,12 +337,6 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderRadius: 8,
   },
-  closeBtn: {
-    marginTop: 20,
-    alignSelf: "center",
-    padding: 12,
-    borderRadius: 8,
-  },
   todayIndicator: {
     fontSize: 8,
     position: "absolute",
@@ -381,5 +345,16 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
+  },
+  logoutButton: {
+    marginTop: 20,
+    padding: 12,
+    borderRadius: 8,
+    alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.1)",
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
