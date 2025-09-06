@@ -53,10 +53,10 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     width: "100%",
     height: "auto",
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 9,
     marginBottom: 10,
-    borderRadius: 10,
+    borderRadius: 100,
   },
   avatar: {
     width: 40,
@@ -65,7 +65,7 @@ const styles = StyleSheet.create({
     marginRight: 10,
   },
   username: {
-    fontSize: 18,
+    fontSize: theme.fontSize.md,
     fontWeight: "bold",
     textAlign: "center",
     width: "80%",

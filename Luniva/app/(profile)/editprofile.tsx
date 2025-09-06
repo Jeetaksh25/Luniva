@@ -29,7 +29,6 @@ const EditProfile = () => {
 
   const [displayName, setDisplayName] = useState(user?.displayName || "");
   const [username, setUsername] = useState(user?.username || "");
-  const [email, setEmail] = useState(user?.email || "");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -37,7 +36,6 @@ const EditProfile = () => {
   useEffect(() => {
     setDisplayName(user?.displayName || "");
     setUsername(user?.username || "");
-    setEmail(user?.email || "");
   }, [user]);
 
   const handleImagePick = async () => {
@@ -73,7 +71,6 @@ const EditProfile = () => {
       const updates: any = {};
       if (displayName !== user.displayName) updates.displayName = displayName;
       if (username !== user.username) updates.username = username;
-      if (email !== user.email) updates.email = email;
 
       // Apply updates to Firestore
       const { doc, updateDoc } = await import("firebase/firestore");
@@ -84,7 +81,7 @@ const EditProfile = () => {
       }
 
       // Go back to profile page
-      router.replace("/id");
+      router.replace("/profile");
     } catch (error) {
       console.error("❌ Error saving profile changes:", error);
     } finally {
@@ -124,23 +121,23 @@ const EditProfile = () => {
               <AntDesign name="edit" size={20} color="#fff" />
             </View>
           </TouchableOpacity>
+          <Text style={{ color: themeColors.text, marginTop: 10, fontSize: theme.fontSize.md }}>Profile Picture</Text>
         </View>
 
         <View style={styles.form}>
           <CustomInput
             title="Display Name"
             handleOnChangeText={setDisplayName}
-            containerStyles={{ backgroundColor: darkenColor(modeColor().background, 10) }}
+            containerStyles={{
+              backgroundColor: darkenColor(modeColor().background, 10),
+            }}
           />
           <CustomInput
             title="Username"
             handleOnChangeText={setUsername}
-            containerStyles={{ backgroundColor: darkenColor(modeColor().background, 10) }}
-          />
-          <CustomInput
-            title="Email"
-            handleOnChangeText={setEmail}
-            containerStyles={{ backgroundColor: darkenColor(modeColor().background, 10) }}
+            containerStyles={{
+              backgroundColor: darkenColor(modeColor().background, 10),
+            }}
           />
         </View>
 
@@ -164,7 +161,7 @@ const styles = StyleSheet.create({
   header: {
     alignItems: "center",
     marginVertical: 24,
-    flexDirection: "row",
+    flexDirection: "column",
     width: "100%",
     justifyContent: "center",
   },
