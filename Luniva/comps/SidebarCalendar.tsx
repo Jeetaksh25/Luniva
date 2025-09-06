@@ -21,6 +21,7 @@ import { getTodayDateString, isPastDate } from "@/utils/dateUtils";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import ProfileButton from "@/comps/ProfileButton";
+import { modeColor } from "@/theme/modeColor";
 
 const { width } = Dimensions.get("window");
 const SIDEBAR_WIDTH = width * 0.8;
@@ -244,7 +245,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
               <View
                 style={[
                   styles.streakContainer,
-                  { backgroundColor: theme.colors.warningColor + "20" },
+                  { backgroundColor: theme.colors.warningColor + "50" },
                 ]}
               >
                 <Text
@@ -264,11 +265,12 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
 
               <View style={styles.header}>
                 <TouchableOpacity
-                  onPress={() =>
+                  onPress={() =>{
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                     setMonth((m) =>
                       m === 0 ? (setYear((y) => y - 1), 11) : m - 1
                     )
-                  }
+                  }}
                 >
                   <Feather
                     name="chevron-left"
@@ -279,15 +281,16 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                 <Text style={[styles.headerText, { color: themeColors.text }]}>
                   {new Date(year, month).toLocaleString("default", {
                     month: "long",
-                  })}{" "}
+                  })}
                   {year}
                 </Text>
                 <TouchableOpacity
-                  onPress={() =>
+                  onPress={() =>{
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                     setMonth((m) =>
                       m === 11 ? (setYear((y) => y + 1), 0) : m + 1
                     )
-                  }
+                  }}
                 >
                   <Feather
                     name="chevron-right"
@@ -302,7 +305,14 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                 renderItem={renderDay}
                 keyExtractor={(item) => item.date}
                 numColumns={7}
-                contentContainerStyle={styles.grid}
+                contentContainerStyle={[
+                  styles.grid,
+                  {
+                    backgroundColor: darkenColor(themeColors.background, 20),
+                    padding: 10,
+                    borderRadius: 10,
+                  },
+                ]}
               />
 
               <ProfileButton user={user} onPress={openProfile} />
@@ -320,18 +330,22 @@ const styles = StyleSheet.create({
   sidebar: {
     position: "absolute",
     left: 0,
-    top: 0,
+    top: 1,
     width: SIDEBAR_WIDTH,
-    padding: 10,
+    paddingVertical: 10,
     zIndex: 10,
     height: "100%",
     justifyContent: "space-between",
+    alignSelf: "center",
   },
   streakContainer: {
     alignItems: "center",
+    justifyContent: "center",
+    alignSelf: "center",
     marginBottom: 20,
     padding: 16,
     borderRadius: 12,
+    width: "95%",
   },
   streakText: {
     fontSize: 24,
@@ -346,6 +360,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 20,
+    paddingHorizontal: 20,
   },
   headerText: {
     fontSize: 18,
@@ -369,17 +384,6 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  logoutButton: {
-    marginTop: 20,
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    backgroundColor: "rgba(255,255,255,0.1)",
-  },
-  logoutText: {
-    fontSize: 16,
-    fontWeight: "600",
   },
   userContainer: {
     flexDirection: "row",

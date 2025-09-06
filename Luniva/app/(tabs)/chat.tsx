@@ -13,6 +13,7 @@ import {
   PanResponder,
   Dimensions,
   BackHandler,
+  Image,
 } from "react-native";
 import MessageInput from "@/comps/MessageInput";
 import { useColorScheme } from "react-native";
@@ -26,6 +27,8 @@ import { useDateChange } from "@/utils/useDateChange";
 import { getTodayDateString } from "@/utils/dateUtils";
 import { transformUserMessage } from "@/utils/transformPrompt";
 import * as Haptics from "expo-haptics";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { modeColor } from "@/theme/modeColor";
 
 const { width } = Dimensions.get("window");
 const SWIPE_THRESHOLD = 50;
@@ -63,6 +66,11 @@ const Chat = () => {
 
   useDateChange((newDate: string) => handleDateChange(newDate));
 
+  const toggleSidebar = (visible: boolean) => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    setSidebarVisible(visible);
+  };
+
   useEffect(() => {
     if (isAiTyping) {
       let i = 0;
@@ -89,7 +97,9 @@ const Chat = () => {
       lastAiIdRef.current = latestAI.id;
       setLastAIText(latestAI.text);
 
-      const match = latestAI.text.trim().match(/^(\p{Emoji}|\p{Extended_Pictographic})/u);
+      const match = latestAI.text
+        .trim()
+        .match(/^(\p{Emoji}|\p{Extended_Pictographic})/u);
       const emoji = match ? match[0] : "🙂";
 
       fadeAnim.stopAnimation?.();
@@ -109,34 +119,28 @@ const Chat = () => {
       });
     }
   }, [messages, isAiTyping]);
-  const extractEmojiAndSet = (text: string) => {
-    const match = text.match(/^[\p{Emoji_Presentation}\p{Emoji}\uFE0F]+/u);
-    const emoji = match ? match[0] : "🙂";
-    animateEmojiChange(() => setCurrentEmoji(emoji));
-    return text.replace(emoji, "").trim();
-  };
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: (evt, gestureState) => {
-        // Only capture if starting from left edge
         return evt.nativeEvent.locationX < 30;
       },
       onMoveShouldSetPanResponder: (evt, gestureState) => {
-        // Only capture if starting from left edge and moving right
         return evt.nativeEvent.locationX < 30 && gestureState.dx > 5;
       },
       onPanResponderMove: (_, gestureState) => {
-        // Optional: Add visual feedback for swipe
+        if (gestureState.dx > SWIPE_THRESHOLD / 2 && !sidebarVisible) {
+          // Give light feedback while dragging near threshold
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
       },
       onPanResponderRelease: (_, gestureState) => {
-        if (gestureState.dx > 20) {
+        if (gestureState.dx > SWIPE_THRESHOLD) {
+          // Medium feedback once sidebar actually opens
+          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           setSidebarVisible(true);
         }
       },
-      onPanResponderTerminate: () => {},
-      onPanResponderReject: () => {},
-      onShouldBlockNativeResponder: () => false, // Allow other components to respond
     })
   ).current;
 
@@ -144,7 +148,7 @@ const Chat = () => {
   useEffect(() => {
     const backAction = () => {
       if (sidebarVisible) {
-        setSidebarVisible(false);
+        toggleSidebar(false);
         return true;
       }
       return false;
@@ -255,6 +259,11 @@ const Chat = () => {
     });
   };
 
+  const handleProfilePress = () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push("/profile");
+  };
+
   if (!user) return <Redirect href="/signin" />;
 
   return (
@@ -273,16 +282,39 @@ const Chat = () => {
             { backgroundColor: themeColors.background },
           ]}
         >
-          <Feather
-            name="menu"
-            size={theme.fontSize["3xl"]}
-            color={themeColors.text}
-            style={styles.menuIcon}
-            onPress={() => setSidebarVisible(true)}
-          />
+          <TouchableOpacity activeOpacity={0.7} style={{ zIndex: 99 }}>
+            <Feather
+              name="menu"
+              size={theme.fontSize["3xl"]}
+              color={themeColors.text}
+              style={styles.menuIcon}
+              onPress={() => {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                toggleSidebar(true);
+              }}
+            />
+          </TouchableOpacity>
+
+          <View style={styles.userProfile}>
+            <TouchableOpacity onPress={handleProfilePress} activeOpacity={0.7}>
+              {user.photoBase64 ? (
+                <Image
+                  source={{ uri: `data:image/jpeg;base64,${user.photoBase64}` }}
+                  style={styles.avatar}
+                />
+              ) : (
+                <FontAwesome
+                  name="user-circle-o"
+                  size={45}
+                  color={modeColor().text}
+                />
+              )}
+            </TouchableOpacity>
+          </View>
+
           <SidebarCalendar
             visible={sidebarVisible}
-            onClose={() => setSidebarVisible(false)}
+            onClose={() => toggleSidebar(false)}
           />
 
           <Animated.View style={[styles.emojiContainer, { opacity: fadeAnim }]}>
@@ -384,7 +416,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     paddingTop: 40,
-    paddingBottom: 10,
+    paddingBottom: 5,
   },
   emoji: { fontSize: 80 },
   listContent: { paddingHorizontal: 20, paddingVertical: 5, flexGrow: 1 },
@@ -418,9 +450,22 @@ const styles = StyleSheet.create({
     left: 0,
     top: 0,
     bottom: 0,
-    width: 20, // Very thin strip
+    width: 20,
     zIndex: 100,
-    // backgroundColor: 'transparent' // Keep it invisible
+  },
+  avatar: {
+    width: 45,
+    height: 45,
+    borderRadius: 50,
+    marginRight: 10,
+    borderWidth: 2,
+    borderColor: theme.colors.primaryColor,
+  },
+  userProfile: {
+    position: "absolute",
+    right: 10,
+    top: 55,
+    zIndex: 99,
   },
 });
 
