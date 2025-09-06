@@ -7,7 +7,7 @@ import { darkenColor } from "@/functions/darkenColor";
 interface InfoTabProps {
   label: string;
   value: any;
-  column?: boolean; // toggle between row/column
+  column?: boolean; 
 }
 
 const InfoTab: FC<InfoTabProps> = ({ label, value, column = false }) => {

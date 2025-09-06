@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -20,9 +20,10 @@ import { router } from "expo-router";
 import AntDesign from "@expo/vector-icons/AntDesign";
 
 const UserProfile = () => {
-  const { user, updateProfilePhoto, logout, userStats } = useStore();
-  const stats = userStats;
+  const { user, updateProfilePhoto, logout } = useStore();
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+
   const colorScheme = useColorScheme();
   const themeColors =
     colorScheme === "dark" ? theme.darkTheme : theme.lightTheme;
@@ -50,17 +51,25 @@ const UserProfile = () => {
       });
 
       if (!result.canceled) {
-        setUploading(true);
         const image = result.assets[0];
-
         if (image.base64) {
-          await updateProfilePhoto(image.base64);
+          setSelectedImage(image.base64);
         }
-
-        setUploading(false);
       }
     } catch (error) {
-      console.error("❌ Error uploading image:", error);
+      console.error("❌ Error picking image:", error);
+    }
+  };
+
+  const handleChangeProfilePic = async () => {
+    if (!selectedImage) return;
+    setUploading(true);
+    try {
+      await updateProfilePhoto(selectedImage);
+      setSelectedImage(null);
+    } catch (error) {
+      console.error("❌ Error updating profile pic:", error);
+    } finally {
       setUploading(false);
     }
   };
@@ -76,38 +85,50 @@ const UserProfile = () => {
         {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleImagePick}>
-            {uploading ? (
-              <ActivityIndicator
-                size="large"
-                color={theme.colors.primaryColor}
-              />
-            ) : user.photoBase64 ? (
-              <Image
-                source={{ uri: `data:image/jpeg;base64,${user.photoBase64}` }}
-                style={styles.avatar}
-              />
-            ) : (
-              <View style={[styles.avatar, styles.placeholder]}>
-                <Text style={{ color: theme.colors.infoColor, fontSize: 28 }}>
-                  +
-                </Text>
+            <View>
+              {uploading ? (
+                <ActivityIndicator
+                  size="large"
+                  color={theme.colors.primaryColor}
+                  style={styles.avatar}
+                />
+              ) : selectedImage || user.photoBase64 ? (
+                <Image
+                  source={{
+                    uri: `data:image/jpeg;base64,${selectedImage || user.photoBase64}`,
+                  }}
+                  style={styles.avatar}
+                />
+              ) : (
+                <View style={[styles.avatar, styles.placeholder]}>
+                  <Text style={{ color: theme.colors.infoColor, fontSize: 28 }}>
+                    +
+                  </Text>
+                </View>
+              )}
+
+              {/* Pencil icon overlay */}
+              <View style={styles.pencilIcon}>
+                <AntDesign name="edit" size={20} color="#fff" />
               </View>
-            )}
+            </View>
           </TouchableOpacity>
-          <View>
-            <Text style={[styles.name, { color: themeColors.text }]}>
-              {user.displayName || "No Name"}
-            </Text>
-            <Text
-              style={[styles.username, { color: theme.colors.primaryColor }]}
-            >
-              @{user.username || "username"}
-            </Text>
-          </View>
         </View>
+
+        {/* Change button */}
+        {selectedImage && (
+          <View style={styles.changeButton}>
+            <CustomButton
+              title="Change Profile Picture"
+              handlePress={handleChangeProfilePic}
+            />
+          </View>
+        )}
 
         {/* Stats / Info Section */}
         <View style={styles.infoContainer}>
+          <InfoTab label="Display Name" value={user.displayName || "No Name"} />
+          <InfoTab label="Username" value={user.username || "No username"} />
           <InfoTab label="Email" value={user.email || "No Email"} />
           <InfoTab label="Membership" value="Free Tier" />
           <InfoTab
@@ -126,10 +147,11 @@ const UserProfile = () => {
         <View style={styles.actions}>
           <CustomButton
             title="Edit Profile"
-            handlePress={() => console.log("Edit Profile")}
+            handlePress={() => router.push("/edit")}
           />
         </View>
       </ScrollView>
+
       <View style={[styles.actions2]}>
         <CustomButton
           title="Logout"
@@ -145,17 +167,14 @@ const UserProfile = () => {
 export default UserProfile;
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
     alignItems: "center",
     marginVertical: 24,
     flexDirection: "row",
     width: "100%",
-    justifyContent: "space-around",
-    paddingHorizontal: 20,
+    justifyContent: "center",
   },
   avatar: {
     width: 120,
@@ -170,35 +189,17 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  name: {
-    fontSize: 24,
-    fontWeight: "700",
+  pencilIcon: {
+    position: "absolute",
+    bottom: 0,
+    right: 0,
+    backgroundColor: theme.colors.primaryColor,
+    padding: 6,
+    borderRadius: 20,
   },
-  username: {
-    fontSize: 16,
-    fontWeight: "500",
-    marginTop: 4,
-  },
-  infoContainer: {
-    marginHorizontal: 20,
-    gap: 12,
-  },
-  actions: {
-    marginTop: 30,
-    marginHorizontal: 40,
-    gap: 12,
-  },
-  button: {
-    paddingVertical: 14,
-    borderRadius: 12,
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  buttonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 16,
-  },
+  infoContainer: { marginHorizontal: 20, gap: 12 },
+  actions: { marginTop: 30, marginHorizontal: 40, gap: 12 },
+  changeButton: { marginHorizontal: 40, marginBottom: 20 },
   actions2: {
     marginHorizontal: 40,
     position: "absolute",
