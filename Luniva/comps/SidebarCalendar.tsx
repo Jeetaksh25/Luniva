@@ -11,17 +11,16 @@ import {
   PanResponder,
   Modal,
   TouchableWithoutFeedback,
+  Image,
 } from "react-native";
 import Feather from "@expo/vector-icons/Feather";
 import { useStore } from "@/store/useAppStore";
 import { theme } from "@/theme/theme";
 import { darkenColor } from "@/functions/darkenColor";
-import {
-  getTodayDateString,
-  isPastDate,
-} from "@/utils/dateUtils";
+import { getTodayDateString, isPastDate } from "@/utils/dateUtils";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
+import ProfileButton from "@/comps/ProfileButton";
 
 const { width } = Dimensions.get("window");
 const SIDEBAR_WIDTH = width * 0.8;
@@ -148,10 +147,10 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
     });
   }, [month, year, chats]);
 
-  const handleLogout = () => {
+  const openProfile = () => {
+    closeSidebar();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    logout();
-    router.replace("/");
+    router.push("/id");
   };
 
   const renderDay = ({ item }: { item: any }) => {
@@ -225,7 +224,12 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
   if (!visible) return null;
 
   return (
-    <Modal transparent={true} visible={visible} animationType="none" onRequestClose={closeSidebar}>
+    <Modal
+      transparent={true}
+      visible={visible}
+      animationType="none"
+      onRequestClose={closeSidebar}
+    >
       <TouchableWithoutFeedback onPress={closeSidebar}>
         <View style={styles.modalOverlay}>
           <TouchableWithoutFeedback>
@@ -243,19 +247,34 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                   { backgroundColor: theme.colors.warningColor + "20" },
                 ]}
               >
-                <Text style={[styles.streakText, { color: theme.colors.warningColor }]}>
+                <Text
+                  style={[
+                    styles.streakText,
+                    { color: theme.colors.warningColor },
+                  ]}
+                >
                   🔥 {streak} day streak
                 </Text>
-                <Text style={[styles.streakSubtext, { color: themeColors.text }]}>
+                <Text
+                  style={[styles.streakSubtext, { color: themeColors.text }]}
+                >
                   {streak > 0 ? "Keep it going!" : "Start your streak today!"}
                 </Text>
               </View>
 
               <View style={styles.header}>
                 <TouchableOpacity
-                  onPress={() => setMonth((m) => (m === 0 ? (setYear((y) => y - 1), 11) : m - 1))}
+                  onPress={() =>
+                    setMonth((m) =>
+                      m === 0 ? (setYear((y) => y - 1), 11) : m - 1
+                    )
+                  }
                 >
-                  <Feather name="chevron-left" size={24} color={themeColors.text} />
+                  <Feather
+                    name="chevron-left"
+                    size={24}
+                    color={themeColors.text}
+                  />
                 </TouchableOpacity>
                 <Text style={[styles.headerText, { color: themeColors.text }]}>
                   {new Date(year, month).toLocaleString("default", {
@@ -264,9 +283,17 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                   {year}
                 </Text>
                 <TouchableOpacity
-                  onPress={() => setMonth((m) => (m === 11 ? (setYear((y) => y + 1), 0) : m + 1))}
+                  onPress={() =>
+                    setMonth((m) =>
+                      m === 11 ? (setYear((y) => y + 1), 0) : m + 1
+                    )
+                  }
                 >
-                  <Feather name="chevron-right" size={24} color={themeColors.text} />
+                  <Feather
+                    name="chevron-right"
+                    size={24}
+                    color={themeColors.text}
+                  />
                 </TouchableOpacity>
               </View>
 
@@ -278,10 +305,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                 contentContainerStyle={styles.grid}
               />
 
-              {/* Logout Button at Bottom */}
-              <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
-                <Text style={[styles.logoutText, { color: themeColors.text }]}>Logout</Text>
-              </TouchableOpacity>
+              <ProfileButton user={user} onPress={openProfile} />
             </Animated.View>
           </TouchableWithoutFeedback>
         </View>
@@ -356,5 +380,21 @@ const styles = StyleSheet.create({
   logoutText: {
     fontSize: 16,
     fontWeight: "600",
+  },
+  userContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    width: "100%",
+    height: 50,
+  },
+  avatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    marginRight: 10,
+  },
+  username: {
+    fontSize: 16,
+    fontWeight: "bold",
   },
 });

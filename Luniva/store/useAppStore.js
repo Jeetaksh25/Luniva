@@ -7,7 +7,7 @@ import {
   createUserWithEmailAndPassword,
   updateProfile,
 } from "firebase/auth";
-import { ensureUserDoc } from "../firebase/user";
+import { ensureUserDoc, saveProfilePhoto } from "../firebase/user";
 import {
   createChat,
   getOrCreateDailyChat,
@@ -37,6 +37,7 @@ export const useStore = create((set, get) => ({
   currentDate: getTodayDateString(),
   isAiTyping: false,
   unsubscribeMessages: null,
+  userStats: null,
 
   initAuth: () => {
     return new Promise((resolve) => {
@@ -49,11 +50,9 @@ export const useStore = create((set, get) => ({
             const unsubscribeUser = onSnapshot(userRef, (doc) => {
               if (doc.exists()) {
                 const userData = doc.data();
-                console.log(
-                  "🔥 User data updated - streak:",
-                  userData.dailyStreak
-                );
+                console.log("🔥 User data updated - streak:", userData.dailyStreak);
                 set({ user: { ...user, ...userData } });
+                get().updateUserStats(); // Update stats when user data changes
               }
             });
 
@@ -63,7 +62,7 @@ export const useStore = create((set, get) => ({
               unsubscribeUser,
               currentDate: getTodayDateString(), // Use the corrected function
             });
-
+            get().updateUserStats();
             get().createTodayChat();
           } catch (error) {
             console.error("Error ensuring user doc:", error);
@@ -508,5 +507,43 @@ export const useStore = create((set, get) => ({
     } else {
       console.log("❌ August 31st chat does NOT exist");
     }
+  },
+  updateProfilePhoto: async (base64String) => {
+    const { user } = get();
+    if (!user) return;
+
+    try {
+      // Optimistic UI update
+      set({ user: { ...user, photoBase64: base64String } });
+
+      // Persist to Firestore
+      await saveProfilePhoto(user.uid, base64String);
+
+      console.log("✅ Profile photo updated via Zustand");
+    } catch (error) {
+      console.error("❌ Error updating profile photo:", error);
+    }
+  },
+  updateUserStats: () => {
+    const { user } = get();
+    if (!user) {
+      set({ userStats: null });
+      return;
+    }
+    
+    const avgMessagesPerChat =
+      user.totalDaysChatted > 0
+        ? (user.totalMessages || 0) / user.totalDaysChatted
+        : 0;
+  
+    const stats = {
+      currentStreak: user.dailyStreak || 0,
+      highestStreak: user.highestStreak || 0,
+      totalDaysChatted: user.totalDaysChatted || 0,
+      totalMessages: user.totalMessages || 0,
+      avgMessagesPerChat: Math.round(avgMessagesPerChat * 100) / 100,
+    };
+    
+    set({ userStats: stats });
   },
 }));
