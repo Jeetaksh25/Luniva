@@ -74,13 +74,6 @@ export default function SignIn() {
             />
             <CustomInput
               title="Password"
-              icon={
-                <FontAwesome5
-                  name="key"
-                  size={theme.fontSize.xl}
-                  color={theme.colors.secondaryColor}
-                />
-              }
               handleOnChangeText={setPassword}
             />
           </View>

@@ -147,7 +147,7 @@ const UserProfile = () => {
         <View style={styles.actions}>
           <CustomButton
             title="Edit Profile"
-            handlePress={() => router.push("/edit")}
+            handlePress={() => router.push("/editprofile")}
           />
         </View>
       </ScrollView>
@@ -171,7 +171,7 @@ const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
     alignItems: "center",
-    marginVertical: 24,
+    marginBottom: 14,
     flexDirection: "row",
     width: "100%",
     justifyContent: "center",
@@ -197,8 +197,8 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 20,
   },
-  infoContainer: { marginHorizontal: 20, gap: 12 },
-  actions: { marginTop: 30, marginHorizontal: 40, gap: 12 },
+  infoContainer: { marginHorizontal: 20, gap: 8 },
+  actions: { marginTop: 20, marginHorizontal: 40 },
   changeButton: { marginHorizontal: 40, marginBottom: 20 },
   actions2: {
     marginHorizontal: 40,

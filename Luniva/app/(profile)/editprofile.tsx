@@ -18,6 +18,8 @@ import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import AntDesign from "@expo/vector-icons/AntDesign";
+import { darkenColor } from "@/functions/darkenColor";
+import { modeColor } from "@/theme/modeColor";
 
 const EditProfile = () => {
   const { user, updateProfilePhoto } = useStore();
@@ -128,17 +130,17 @@ const EditProfile = () => {
           <CustomInput
             title="Display Name"
             handleOnChangeText={setDisplayName}
-            containerStyles={{ marginBottom: 12 }}
+            containerStyles={{ backgroundColor: darkenColor(modeColor().background, 10) }}
           />
           <CustomInput
             title="Username"
             handleOnChangeText={setUsername}
-            containerStyles={{ marginBottom: 12 }}
+            containerStyles={{ backgroundColor: darkenColor(modeColor().background, 10) }}
           />
           <CustomInput
             title="Email"
             handleOnChangeText={setEmail}
-            containerStyles={{ marginBottom: 12 }}
+            containerStyles={{ backgroundColor: darkenColor(modeColor().background, 10) }}
           />
         </View>
 
@@ -187,5 +189,5 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 20,
   },
-  form: { marginHorizontal: 20, marginTop: 20 },
+  form: { marginHorizontal: 20, marginTop: 20, gap: 20 },
 });

@@ -93,21 +93,25 @@ export const useStore = create((set, get) => ({
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password);
       await ensureUserDoc(cred.user);
+      set({ user: cred.user });
     } finally {
       set({ loading: false });
     }
   },
 
   logout: async () => {
-    const { unsubscribeUser, unsubscribeMessages, unsubscribeChats } = get();
-
-    // ✅ cleanup all listeners
+    const { unsubscribeUser, unsubscribeMessages } = get();
+  
+    // ✅ First unsubscribe from ALL listeners
     if (unsubscribeUser) unsubscribeUser();
     if (unsubscribeMessages) unsubscribeMessages();
-    if (unsubscribeChats) unsubscribeChats();
-
+    
+    // ✅ Also check if there are any other listeners that might be active
+    // For example, if you have chat listeners in other components
+    
+    // ✅ THEN sign out
     await signOut(auth);
-
+  
     set({
       user: null,
       chats: [],
@@ -115,7 +119,7 @@ export const useStore = create((set, get) => ({
       currentChatId: null,
       unsubscribeUser: null,
       unsubscribeMessages: null,
-      unsubscribeChats: null,
+      userStats: null,
     });
   },
 

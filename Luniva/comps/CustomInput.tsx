@@ -2,20 +2,16 @@ import {
   View,
   Text,
   TouchableOpacity,
-  ActivityIndicator,
-  GestureResponderEvent,
+  TextInput,
   StyleProp,
   TextStyle,
   ViewStyle,
-  TextInput,
+  useColorScheme,
 } from "react-native";
-import React, { FC } from "react";
-import colors from "tailwindcss/colors";
-import { GestureDetectorBridge } from "react-native-screens";
+import React, { FC, useState } from "react";
 import { theme } from "../theme/theme";
-
 import * as Haptics from "expo-haptics";
-import { useColorScheme } from "react-native";
+import AntDesign from "@expo/vector-icons/AntDesign";
 
 interface CustomInputProps {
   title: string;
@@ -35,6 +31,10 @@ const CustomInput: FC<CustomInputProps> = ({
   const colorScheme = useColorScheme();
   const themeColors =
     colorScheme === "dark" ? theme.darkTheme : theme.lightTheme;
+
+  const [showPassword, setShowPassword] = useState(false);
+  const isPasswordField = title === "Password";
+
   return (
     <View
       style={[
@@ -57,7 +57,7 @@ const CustomInput: FC<CustomInputProps> = ({
         <TextInput
           placeholder={title}
           keyboardType={title === "Email" ? "email-address" : "default"}
-          secureTextEntry={title === "Password"}
+          secureTextEntry={isPasswordField && !showPassword}
           onChangeText={handleOnChangeText}
           style={[
             {
@@ -74,6 +74,21 @@ const CustomInput: FC<CustomInputProps> = ({
           }}
         />
       </View>
+
+      {/* Show/Hide Password Eye */}
+      {isPasswordField && (
+        <TouchableOpacity
+          onPress={() => setShowPassword(!showPassword)}
+          style={{ marginLeft: 8 }}
+        >
+          <AntDesign
+            name={showPassword ? "eye" : "eyeo"}
+            size={theme.fontSize["2xl"]}
+            color={theme.colors.secondaryColor}
+          />
+        </TouchableOpacity>
+      )}
+
       {icon && icon}
     </View>
   );

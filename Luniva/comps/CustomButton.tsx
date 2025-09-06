@@ -62,7 +62,7 @@ const CustomButton: FC<CutomButtonProps> = ({
             style={[
               {
                 color: "white",
-                marginLeft: 8,
+                marginRight: 8,
                 fontFamily: "Poppins-Regular",
                 fontWeight: "bold",
               },

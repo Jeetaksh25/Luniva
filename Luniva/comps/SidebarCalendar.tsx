@@ -150,7 +150,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
   const openProfile = () => {
     closeSidebar();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push("/id");
+    router.push("/profile");
   };
 
   const renderDay = ({ item }: { item: any }) => {
