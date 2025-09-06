@@ -398,7 +398,9 @@ const Chat = () => {
               </Text>
               <TouchableOpacity
                 style={styles.todayButton}
-                onPress={() => useStore.getState().createTodayChat()}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+                  useStore.getState().createTodayChat()}}
               >
                 <Text style={{ color: "#fff" }}>Go to Today's Chat</Text>
               </TouchableOpacity>
