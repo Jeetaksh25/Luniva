@@ -7,19 +7,30 @@ import { theme } from "../theme/theme";
 import { darkenColor } from "@/functions/darkenColor";
 
 interface ProgressButtonProps {
-    onPress: () => void
+  onPress: () => void;
 }
 
-const ProgressButton: FC<ProgressButtonProps> = ({
-    onPress
-}) => {
-    return (
-        <View>
-            <TouchableOpacity>
-                <Text>
-                    Progress
-                </Text>
-            </TouchableOpacity>
-        </View>
-    )
-}
+const ProgressButton: FC<ProgressButtonProps> = ({ onPress }) => {
+  return (
+    <View
+      style={[
+        styles.container,
+        { backgroundColor: darkenColor(modeColor().background, 10) },
+      ]}
+    >
+      <TouchableOpacity>
+        <Text>Progress</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
+
+export default ProgressButton;
+
+const styles = StyleSheet.create({
+  container: {},
+  progressText: {
+    color: modeColor().text,
+    fontSize: theme.fontSize.lg,
+  },
+});

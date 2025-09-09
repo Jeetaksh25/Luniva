@@ -22,6 +22,7 @@ import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import ProfileButton from "@/comps/ProfileButton";
 import { modeColor } from "@/theme/modeColor";
+import ProgressButton from "@/comps/ProgressButton";
 
 const { width } = Dimensions.get("window");
 const SIDEBAR_WIDTH = width * 0.8;
@@ -154,6 +155,12 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
     router.push("/profile");
   };
 
+  const openProgress = () => {
+    closeSidebar();
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push("/");
+  };
+
   const renderDay = ({ item }: { item: any }) => {
     const todayStr = getTodayDateString();
     const isTodayItem = item.date === todayStr;
@@ -265,11 +272,11 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
 
               <View style={styles.header}>
                 <TouchableOpacity
-                  onPress={() =>{
+                  onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                     setMonth((m) =>
                       m === 0 ? (setYear((y) => y - 1), 11) : m - 1
-                    )
+                    );
                   }}
                 >
                   <Feather
@@ -285,11 +292,11 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                   {year}
                 </Text>
                 <TouchableOpacity
-                  onPress={() =>{
+                  onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                     setMonth((m) =>
                       m === 11 ? (setYear((y) => y + 1), 0) : m + 1
-                    )
+                    );
                   }}
                 >
                   <Feather
@@ -314,6 +321,8 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                   },
                 ]}
               />
+
+              <ProgressButton onPress={openProgress} />
 
               <ProfileButton user={user} onPress={openProfile} />
             </Animated.View>
@@ -384,21 +393,5 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
-  },
-  userContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    width: "100%",
-    height: 50,
-  },
-  avatar: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    marginRight: 10,
-  },
-  username: {
-    fontSize: 16,
-    fontWeight: "bold",
   },
 });
