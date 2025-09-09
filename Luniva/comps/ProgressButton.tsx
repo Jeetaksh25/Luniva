@@ -10,6 +10,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { theme } from "../theme/theme";
 import { useModeColor } from "../theme/modeColor";
 import { Svg, Path, Circle } from "react-native-svg";
+import { getChatTrend, renderZigZag } from "@/utils/chatTrend";
+import { useStore } from "@/store/useAppStore";
 
 interface ProgressButtonProps {
   onPress: () => void;
@@ -20,8 +22,13 @@ const ProgressButton: React.FC<ProgressButtonProps> = ({
   onPress,
   progress,
 }) => {
+  const chats = useStore((state) => state.chats);
   const themeColors = useModeColor();
-  const leftWidth = Dimensions.get("window").width * 0.4; // 60% of screen width
+  const leftWidth = Dimensions.get("window").width * 0.4;
+
+  const todayStr = new Date().toISOString().split("T")[0];
+  const trend = getChatTrend(chats, todayStr);
+  const path = renderZigZag(trend, leftWidth);
 
   return (
     <TouchableOpacity onPress={onPress}>
@@ -39,12 +46,7 @@ const ProgressButton: React.FC<ProgressButtonProps> = ({
           {/* Simple Zig-Zag Graph */}
           <Svg height="40" width="100%">
             <Path
-              d={`M0 30 
-                  L${leftWidth * 0.2} 10 
-                  L${leftWidth * 0.4} 25 
-                  L${leftWidth * 0.6} 15 
-                  L${leftWidth * 0.8} 5 
-                  L${leftWidth} 20`}
+              d={path}
               stroke={theme.colors.infoColor}
               strokeWidth="3"
               fill="none"
@@ -94,6 +96,16 @@ const ProgressButton: React.FC<ProgressButtonProps> = ({
             </Text>
           </View>
         </View>
+        <Text
+          style={{
+            position: "absolute",
+            textAlign: "center",
+            bottom: 10,
+            color: "white",
+          }}
+        >
+          Tap to View Stats
+        </Text>
       </LinearGradient>
     </TouchableOpacity>
   );
@@ -104,13 +116,13 @@ export default ProgressButton;
 const styles = StyleSheet.create({
   container: {
     width: "95%",
-    height: 120,
+    height: 140,
     marginBottom: 50,
     borderRadius: theme.borderRadius.lg,
     flexDirection: "row",
     padding: 15,
     justifyContent: "space-around",
-    alignItems: "center",
+    alignItems: "flex-start",
     alignSelf: "center",
   },
   leftSection: {
@@ -133,7 +145,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   pieText: {
-    fontSize:12,
+    fontSize: 12,
     fontWeight: "bold",
     color: "white",
     textAlign: "center",

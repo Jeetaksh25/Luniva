@@ -273,6 +273,19 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                 </Text>
               </View>
 
+              <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+                <Text
+                  style={{
+                    fontSize: theme.fontSize.lg,
+                    fontWeight: "600",
+                    color: themeColors.text,
+                    textAlign: "center",
+                  }}
+                >
+                  Your Chats This Month
+                </Text>
+              </View>
+
               <View style={styles.header}>
                 <TouchableOpacity
                   onPress={() => {
@@ -326,7 +339,10 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                 ]}
               />
 
-              <ProgressButton onPress={openProgress} progress={getStreakPercentage(user.dailyStreak)} />
+              <ProgressButton
+                onPress={openProgress}
+                progress={getStreakPercentage(user.dailyStreak)}
+              />
 
               <ProfileButton user={user} onPress={openProfile} />
             </Animated.View>
@@ -355,7 +371,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     alignSelf: "center",
-    marginBottom: 20,
+    marginTop: 10,
+    marginBottom: 40,
     padding: 16,
     borderRadius: 12,
     width: "95%",
@@ -372,7 +389,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 20,
+    marginBottom: 10,
     paddingHorizontal: 20,
   },
   headerText: {
