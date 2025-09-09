@@ -24,7 +24,7 @@ import { getTodayDateString, isToday } from "@/utils/dateUtils";
 import { transformUserMessage } from "@/utils/transformPrompt";
 
 const API_KEY = "AIzaSyApCBdx6xDwRZhWFEqT7CsGwnvp1mkVEhg";
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${API_KEY}`;
+const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
 
 export const useStore = create((set, get) => ({
   user: null,
@@ -76,15 +76,25 @@ export const useStore = create((set, get) => ({
     });
   },
 
-  signup: async (email, password, displayName) => {
-    set({ loading: true });
+  signup: async (email, password, displayName, extraData = {}) => {
+    set({ loading: true, error: null });
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
-      if (displayName) await updateProfile(cred.user, { displayName });
-      await ensureUserDoc(cred.user, { username: displayName });
-      set({ user: cred.user });
-    } finally {
-      set({ loading: false });
+  
+      if (displayName && displayName.trim() !== "") {
+        await updateProfile(cred.user, { displayName: displayName.trim() });
+      }
+  
+      // Merge extra profile data into Firestore doc
+      await ensureUserDoc(cred.user, {
+        username: displayName || cred.user.uid,
+        ...extraData,
+      });
+  
+      set({ user: cred.user, loading: false });
+    } catch (error) {
+      console.error("Signup error:", error);
+      set({ error, loading: false });
     }
   },
 
@@ -157,8 +167,11 @@ export const useStore = create((set, get) => ({
         body: JSON.stringify({
           contents: [
             {
-              role: "user",
-              parts: [{ text: transformUserMessage(text) }],
+              parts: [
+                {
+                  text: transformUserMessage(text, user),
+                },
+              ],
             },
           ],
         }),

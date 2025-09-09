@@ -1,4 +1,11 @@
-import { View, Text, TextInput, Button } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Button,
+  TouchableOpacity,
+  Platform,
+} from "react-native";
 import { useRouter } from "expo-router";
 import { theme } from "@/theme/theme";
 import { Mail, KeyRound } from "lucide-react";
@@ -20,6 +27,12 @@ import { useStore } from "@/store/useAppStore";
 
 import { useState, useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
+import { Picker } from "@react-native-picker/picker";
+import DateTimePicker, {
+  DateTimePickerAndroid,
+} from "@react-native-community/datetimepicker";
+import { darkenColor } from "@/functions/darkenColor";
+import { modeColor } from "@/theme/modeColor";
 
 export default function SignUp() {
   const colorScheme = useColorScheme();
@@ -31,6 +44,9 @@ export default function SignUp() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  const [gender, setGender] = useState("");
+  const [dob, setDob] = useState("");
+
   const { signup, loading, user } = useStore();
 
   useEffect(() => {
@@ -41,9 +57,26 @@ export default function SignUp() {
 
   const handleSignUP = async () => {
     try {
-      await signup(email, password, username);
+      await signup(email, password, username, { gender, dob });
     } catch (error) {
       console.log("Signup error:", error);
+    }
+  };
+
+  const openDatePicker = () => {
+    if (Platform.OS === "android") {
+      DateTimePickerAndroid.open({
+        value: dob ? new Date(dob) : new Date(),
+        mode: "date",
+        display: "calendar",
+        maximumDate: new Date(),
+        onChange: (event, selectedDate) => {
+          if (selectedDate) {
+            const isoDate = selectedDate.toISOString().split("T")[0];
+            setDob(isoDate);
+          }
+        },
+      });
     }
   };
 
@@ -75,6 +108,9 @@ export default function SignUp() {
                 />
               }
               handleOnChangeText={setUsername}
+              containerStyles={{
+                backgroundColor: darkenColor(modeColor().background, 10),
+              }}
             />
             <CustomInput
               title="Email"
@@ -86,11 +122,83 @@ export default function SignUp() {
                 />
               }
               handleOnChangeText={setEmail}
+              containerStyles={{
+                backgroundColor: darkenColor(modeColor().background, 10),
+              }}
             />
             <CustomInput
               title="Password"
               handleOnChangeText={setPassword}
+              containerStyles={{
+                backgroundColor: darkenColor(modeColor().background, 10),
+              }}
             />
+
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: theme.colors.secondaryColor,
+                borderRadius: theme.borderRadius.md,
+                backgroundColor: darkenColor(modeColor().background, 10),
+              }}
+            >
+              <Picker
+                selectedValue={gender}
+                onValueChange={(itemValue) => setGender(itemValue)}
+                style={{ color: theme.colors.secondaryColor }}
+              >
+                <Picker.Item label="Male" value="male" />
+                <Picker.Item label="Female" value="female" />
+                <Picker.Item label="Other" value="other" />
+              </Picker>
+            </View>
+
+            {/* DOB Date Picker */}
+            <View
+              style={{
+                borderWidth: 1,
+                borderColor: theme.colors.secondaryColor,
+                borderRadius: theme.borderRadius.md,
+                backgroundColor: darkenColor(modeColor().background, 10),
+                padding: theme.padding.md,
+                paddingVertical: theme.padding.lg,
+              }}
+            >
+              {Platform.OS === "ios" ? (
+                <>
+                  <DateTimePicker
+                    value={dob ? new Date(dob) : new Date()}
+                    mode="date"
+                    display="spinner"
+                    title="Select Date of Birth"
+                    maximumDate={new Date()}
+                    onChange={(event, selectedDate) => {
+                      if (selectedDate) {
+                        const isoDate = selectedDate
+                          .toISOString()
+                          .split("T")[0];
+                        setDob(isoDate);
+                      }
+                    }}
+                  />
+                  {dob ? (
+                    <Text style={{ color: theme.colors.secondaryColor }}>
+                      Selected: {dob}
+                    </Text>
+                  ) : null}
+                </>
+              ) : (
+                <Text
+                  style={{ color: theme.colors.secondaryColor }}
+                  onPress={() => {
+                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                    openDatePicker();
+                  }}
+                >
+                  {dob ? `Selected: ${dob}` : "Select Date of Birth"}
+                </Text>
+              )}
+            </View>
           </View>
 
           <CustomButton

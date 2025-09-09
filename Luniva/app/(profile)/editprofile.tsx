@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Text,
+  Platform,
 } from "react-native";
 import { useStore } from "@/store/useAppStore";
 import { useColorScheme } from "react-native";
@@ -20,6 +21,10 @@ import { router } from "expo-router";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { darkenColor } from "@/functions/darkenColor";
 import { modeColor } from "@/theme/modeColor";
+import { Picker } from "@react-native-picker/picker";
+import DateTimePicker, {
+  DateTimePickerAndroid,
+} from "@react-native-community/datetimepicker";
 
 const EditProfile = () => {
   const { user, updateProfilePhoto } = useStore();
@@ -32,6 +37,8 @@ const EditProfile = () => {
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [gender, setGender] = useState(user?.gender || "");
+  const [dob, setDob] = useState(user?.dob || "");
 
   useEffect(() => {
     setDisplayName(user?.displayName || "");
@@ -71,6 +78,8 @@ const EditProfile = () => {
       const updates: any = {};
       if (displayName !== user.displayName) updates.displayName = displayName;
       if (username !== user.username) updates.username = username;
+      if (gender !== user.gender) updates.gender = gender;
+      if (dob !== user.dob) updates.dob = dob;
 
       // Apply updates to Firestore
       const { doc, updateDoc } = await import("firebase/firestore");
@@ -86,6 +95,23 @@ const EditProfile = () => {
       console.error("❌ Error saving profile changes:", error);
     } finally {
       setSaving(false);
+    }
+  };
+
+  const openDatePicker = () => {
+    if (Platform.OS === "android") {
+      DateTimePickerAndroid.open({
+        value: dob ? new Date(dob) : new Date(),
+        mode: "date",
+        display: "calendar",
+        maximumDate: new Date(),
+        onChange: (event, selectedDate) => {
+          if (selectedDate) {
+            const isoDate = selectedDate.toISOString().split("T")[0];
+            setDob(isoDate);
+          }
+        },
+      });
     }
   };
 
@@ -121,7 +147,15 @@ const EditProfile = () => {
               <AntDesign name="edit" size={20} color="#fff" />
             </View>
           </TouchableOpacity>
-          <Text style={{ color: themeColors.text, marginTop: 10, fontSize: theme.fontSize.md }}>Profile Picture</Text>
+          <Text
+            style={{
+              color: themeColors.text,
+              marginTop: 10,
+              fontSize: theme.fontSize.md,
+            }}
+          >
+            Profile Picture
+          </Text>
         </View>
 
         <View style={styles.form}>
@@ -139,6 +173,69 @@ const EditProfile = () => {
               backgroundColor: darkenColor(modeColor().background, 10),
             }}
           />
+          <View
+            style={{
+              borderWidth: 1,
+              borderColor: theme.colors.secondaryColor,
+              borderRadius: theme.borderRadius.md,
+              backgroundColor: darkenColor(modeColor().background, 10),
+            }}
+          >
+            <Picker
+              selectedValue={gender}
+              onValueChange={(itemValue) => setGender(itemValue)}
+              style={{ color: theme.colors.secondaryColor }}
+            >
+              <Picker.Item label="Male" value="male" />
+              <Picker.Item label="Female" value="female" />
+              <Picker.Item label="Other" value="other" />
+            </Picker>
+          </View>
+
+          {/* DOB Date Picker */}
+          <View
+            style={{
+              borderWidth: 1,
+              borderColor: theme.colors.secondaryColor,
+              borderRadius: theme.borderRadius.md,
+              backgroundColor: darkenColor(modeColor().background, 10),
+              padding: theme.padding.md,
+              paddingVertical: theme.padding.lg
+            }}
+          >
+            {Platform.OS === "ios" ? (
+              <>
+                <DateTimePicker
+                  value={dob ? new Date(dob) : new Date()}
+                  mode="date"
+                  display="spinner"
+                  title="Select Date of Birth"
+                  maximumDate={new Date()}
+                  onChange={(event, selectedDate) => {
+                    if (selectedDate) {
+                      const isoDate = selectedDate.toISOString().split("T")[0];
+                      setDob(isoDate);
+                    }
+                  }}
+                />
+                {dob ? (
+                  <Text style={{ color: theme.colors.secondaryColor }}>
+                    Selected: {dob}
+                  </Text>
+                ) : null}
+              </>
+            ) : (
+              <Text
+                style={{ color: theme.colors.secondaryColor}}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                  openDatePicker();
+                }}
+              >
+                {dob ? `Selected: ${dob}` : "Select Date of Birth"}
+              </Text>
+            )}
+          </View>
         </View>
 
         <View style={{ marginHorizontal: 40, marginTop: 24 }}>

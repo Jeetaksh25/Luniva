@@ -28,6 +28,9 @@ export async function ensureUserDoc(user, { username = null, dailyChats = [] } =
       highestStreak: 0,
       totalDaysChatted: 0,
       totalMessages: 0,
+
+      gender: user.gender ?? null,
+      dob: user.dob ?? null,
     };
 
     if (!snap.exists()) {

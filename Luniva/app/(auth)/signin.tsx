@@ -17,6 +17,8 @@ import CustomButton from "@/comps/CustomButton";
 import { useStore } from "@/store/useAppStore";
 import { useState, useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
+import { darkenColor } from "@/functions/darkenColor";
+import { modeColor } from "@/theme/modeColor";
 
 export default function SignIn() {
   const colorScheme = useColorScheme();
@@ -71,10 +73,16 @@ export default function SignIn() {
                 />
               }
               handleOnChangeText={setEmail}
+              containerStyles={{
+                backgroundColor: darkenColor(modeColor().background, 10),
+              }}
             />
             <CustomInput
               title="Password"
               handleOnChangeText={setPassword}
+              containerStyles={{
+                backgroundColor: darkenColor(modeColor().background, 10),
+              }}
             />
           </View>
 

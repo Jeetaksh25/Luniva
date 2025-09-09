@@ -79,10 +79,9 @@ const UserProfile = () => {
       style={[styles.container, { backgroundColor: themeColors.background }]}
     >
       <ScrollView
-        contentContainerStyle={{ paddingBottom: 40 }}
+        contentContainerStyle={{ paddingBottom: 10 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={handleImagePick}>
             <View>
@@ -141,25 +140,25 @@ const UserProfile = () => {
                 : "N/A"
             }
           />
+          <InfoTab label="Gender" value={user.gender || "Not set"} />
+          <InfoTab label="Date of Birth" value={user.dob || "Not set"} />
         </View>
 
-        {/* Action Buttons */}
         <View style={styles.actions}>
           <CustomButton
             title="Edit Profile"
             handlePress={() => router.push("/editprofile")}
           />
+          <CustomButton
+            title="Logout"
+            handlePress={handleLogout}
+            icon={
+              <AntDesign name="logout" size={24} color={themeColors.text} />
+            }
+            containerStyles={{ backgroundColor: theme.colors.errorColor }}
+          />
         </View>
       </ScrollView>
-
-      <View style={[styles.actions2]}>
-        <CustomButton
-          title="Logout"
-          handlePress={handleLogout}
-          icon={<AntDesign name="logout" size={24} color={themeColors.text} />}
-          containerStyles={{ backgroundColor: theme.colors.errorColor }}
-        />
-      </View>
     </SafeAreaView>
   );
 };
@@ -167,7 +166,7 @@ const UserProfile = () => {
 export default UserProfile;
 
 const styles = StyleSheet.create({
-  container: { flex: 1 },
+  container: { flex: 1, },
   center: { flex: 1, justifyContent: "center", alignItems: "center" },
   header: {
     alignItems: "center",
@@ -197,14 +196,7 @@ const styles = StyleSheet.create({
     padding: 6,
     borderRadius: 20,
   },
-  infoContainer: { marginHorizontal: 20, gap: 8 },
-  actions: { marginTop: 20, marginHorizontal: 40 },
+  infoContainer: { marginHorizontal: 20, gap: 8, overflow: "scroll" },
+  actions: { marginTop: 20, marginHorizontal: 40, gap: 50 },
   changeButton: { marginHorizontal: 40, marginBottom: 20 },
-  actions2: {
-    marginHorizontal: 40,
-    position: "absolute",
-    bottom: 10,
-    left: 0,
-    right: 0,
-  },
 });
