@@ -19,7 +19,7 @@ const ProgressButton: FC<ProgressButtonProps> = ({ onPress }) => {
       ]}
     >
       <TouchableOpacity>
-        <Text>Progress</Text>
+        <Text style={styles.progressText}>Progress</Text>
       </TouchableOpacity>
     </View>
   );
