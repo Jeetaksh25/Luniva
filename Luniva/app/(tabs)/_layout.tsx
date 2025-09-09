@@ -1,13 +1,10 @@
-
 import { Stack } from "expo-router";
-const AuthLayout = () => {
+const Tabslayout = () => {
   return (
-    <>
-      <Stack>
-        <Stack.Screen name="chat" options={{ headerShown: false }} />
-      </Stack>
-    </>
+    <Stack>
+      <Stack.Screen name="chat" options={{ headerShown: false }} />
+    </Stack>
   );
 };
 
-export default AuthLayout;
+export default Tabslayout;

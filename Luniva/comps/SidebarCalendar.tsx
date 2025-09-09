@@ -288,7 +288,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                 <Text style={[styles.headerText, { color: themeColors.text }]}>
                   {new Date(year, month).toLocaleString("default", {
                     month: "long",
-                  })}
+                  })}&nbsp;
                   {year}
                 </Text>
                 <TouchableOpacity

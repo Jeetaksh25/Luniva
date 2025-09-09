@@ -37,7 +37,7 @@ export default function FirstScreen() {
     };
     
     initializeAuth();
-  }, []);
+  }, [initAuth]);
 
   const [currentEmoji, setCurrentEmoji] = useState("😀");
   const fadeAnim = useRef(new Animated.Value(1)).current;

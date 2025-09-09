@@ -39,7 +39,7 @@ const Chat = () => {
   const themeColors =
     colorScheme === "dark" ? theme.darkTheme : theme.lightTheme;
 
-  // ---------------- Store ----------------
+  // ---------------- Store (Always called in same order) ----------------
   const messages = useStore((s) => s.messages) ?? [];
   const sendMessage = useStore((s) => s.sendMessage);
   const loadMessages = useStore((s) => s.loadMessages);
@@ -49,91 +49,57 @@ const Chat = () => {
   const handleDateChange = useStore((s) => s.handleDateChange);
   const isAiTyping = useStore((s) => s.isAiTyping) ?? false;
   const createTodayChat = useStore((s) => s.createTodayChat);
-  
 
-  // ---------------- States & Refs ----------------
+  // ---------------- States & Refs (Always called in same order) ----------------
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const [isCreatingChat, setIsCreatingChat] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [currentEmoji, setCurrentEmoji] = useState("😀");
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-  const flatListRef = useRef<FlatList>(null);
   const [lastAIText, setLastAIText] = useState("");
   const [typingText, setTypingText] = useState("Typing…");
-  const typingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const lastAiIdRef = useRef<string | null>(null);
   const [isTodayChat, setIsTodayChat] = useState(true);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
-  
-  useEffect(() => {
-    if (!user) {
-      router.replace("/signin");
-    }
-  }, [user, router]);
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const flatListRef = useRef<FlatList>(null);
+  const typingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastAiIdRef = useRef<string | null>(null);
 
-  // ---------------- Date Change Hook ----------------
+  // ---------------- Date Change Hook (Always called) ----------------
   useDateChange(handleDateChange);
 
-  // ---------------- Sidebar Toggle ----------------
+  // ---------------- Callbacks (Always called in same order) ----------------
   const toggleSidebar = useCallback((visible: boolean) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSidebarVisible(visible);
   }, []);
 
-  // ---------------- Typing Indicator ----------------
-  useEffect(() => {
-    if (isAiTyping) {
-      let i = 0;
-      if (typingTimerRef.current) clearInterval(typingTimerRef.current);
-      typingTimerRef.current = setInterval(() => {
-        i = (i + 1) % 3;
-        setTypingText(`Typing${".".repeat(i + 1)}`);
-      }, 450);
-    } else {
-      if (typingTimerRef.current) clearInterval(typingTimerRef.current);
-      setTypingText("Typing…");
-    }
+  const handleProfilePress = useCallback(() => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    router.push("/profile");
+  }, [router]);
 
-    return () => {
-      if (typingTimerRef.current) clearInterval(typingTimerRef.current);
-    };
-  }, [isAiTyping]);
+  const handleSendMessage = useCallback(
+    async (messageText: string) => {
+      if (!messageText.trim()) return;
+      if (!currentChatId) {
+        setIsCreatingChat(true);
+        try {
+          await createTodayChat();
+          sendMessage(messageText);
+        } catch (err) {
+          console.error("Chat creation failed:", err);
+        } finally {
+          setIsCreatingChat(false);
+        }
+      } else {
+        sendMessage(messageText);
+      }
+    },
+    [currentChatId, createTodayChat, sendMessage]
+  );
 
-  // ---------------- Emoji Animation ----------------
-  useEffect(() => {
-    const latestAI = [...messages].reverse().find((m: any) => m.role === "ai");
-    if (!latestAI) return;
-
-    if (latestAI.id !== lastAiIdRef.current || latestAI.text !== lastAIText) {
-      lastAiIdRef.current = latestAI.id;
-      setLastAIText(latestAI.text);
-
-      const match = latestAI.text
-        .trim()
-        .match(/^(\p{Emoji}|\p{Extended_Pictographic})/u);
-      const emoji = match ? match[0] : "🙂";
-
-      // Stop any ongoing animation
-      fadeAnim.stopAnimation();
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 150,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }).start(() => {
-        setCurrentEmoji(emoji);
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 150,
-          easing: Easing.in(Easing.ease),
-          useNativeDriver: true,
-        }).start();
-      });
-    }
-  }, [messages, isAiTyping, fadeAnim]);
-
-  // ---------------- Pan Responder for Sidebar ----------------
+  // ---------------- Pan Responder (Always called) ----------------
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: (evt) => evt.nativeEvent.locationX < 30,
@@ -153,7 +119,66 @@ const Chat = () => {
     })
   ).current;
 
-  // ---------------- Back Button ----------------
+  // ---------------- Effects (Always called in same order) ----------------
+  // User redirect effect
+  useEffect(() => {
+    if (!user) {
+      router.replace("/signin");
+    }
+  }, [user, router]);
+
+  // Typing indicator effect
+  useEffect(() => {
+    if (isAiTyping) {
+      let i = 0;
+      if (typingTimerRef.current) clearInterval(typingTimerRef.current);
+      typingTimerRef.current = setInterval(() => {
+        i = (i + 1) % 3;
+        setTypingText(`Typing${".".repeat(i + 1)}`);
+      }, 450);
+    } else {
+      if (typingTimerRef.current) clearInterval(typingTimerRef.current);
+      setTypingText("Typing…");
+    }
+
+    return () => {
+      if (typingTimerRef.current) clearInterval(typingTimerRef.current);
+    };
+  }, [isAiTyping]);
+
+  // Emoji animation effect
+  useEffect(() => {
+    const latestAI = [...messages].reverse().find((m: any) => m.role === "ai");
+    if (!latestAI) return;
+
+    if (latestAI.id !== lastAiIdRef.current || latestAI.text !== lastAIText) {
+      lastAiIdRef.current = latestAI.id;
+      setLastAIText(latestAI.text);
+
+      const match = latestAI.text
+        .trim()
+        .match(/^(\p{Emoji}|\p{Extended_Pictographic})/u);
+      const emoji = match ? match[0] : "🙂";
+
+      fadeAnim.stopAnimation();
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 150,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: true,
+      }).start(() => {
+        setCurrentEmoji(emoji);
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 150,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }).start();
+      });
+    }
+  }, [messages, isAiTyping, fadeAnim, lastAIText]);
+
+  // Back button effect
   useEffect(() => {
     const backAction = () => {
       if (sidebarVisible) {
@@ -169,10 +194,10 @@ const Chat = () => {
     return () => backHandler.remove();
   }, [sidebarVisible, toggleSidebar]);
 
-  // ---------------- Initialization ----------------
+  // Initialization effect
   useEffect(() => {
     let isMounted = true;
-  
+
     const init = async () => {
       if (!currentChatId) {
         setIsCreatingChat(true);
@@ -185,15 +210,15 @@ const Chat = () => {
         }
       }
     };
-  
+
     init();
-  
+
     return () => {
       isMounted = false;
     };
   }, [currentChatId, createTodayChat]);
 
-  // ---------------- Check Today's Chat ----------------
+  // Check today's chat effect
   useEffect(() => {
     const todayStr = getTodayDateString();
     const currentChat = chats.find(
@@ -202,14 +227,14 @@ const Chat = () => {
     setIsTodayChat(currentChat?.date === todayStr);
   }, [currentChatId, chats]);
 
-  // ---------------- Load Messages ----------------
+  // Load messages effect
   useEffect(() => {
     if (!currentChatId) return;
     const unsubscribe = loadMessages(currentChatId);
     return () => unsubscribe?.();
   }, [currentChatId, loadMessages]);
 
-  // ---------------- Keyboard Listeners ----------------
+  // Keyboard listeners effect
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", () =>
       setKeyboardVisible(true)
@@ -223,43 +248,13 @@ const Chat = () => {
     };
   }, []);
 
-  // ---------------- Auto-scroll ----------------
+  // Auto-scroll effect
   useEffect(() => {
     flatListRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
 
-  // ---------------- Send Message ----------------
-  const handleSendMessage = async (messageText: string) => {
-    if (!messageText.trim()) return;
-    if (!currentChatId) {
-      setIsCreatingChat(true);
-      try {
-        await createTodayChat();
-        sendMessage(messageText);
-      } catch (err) {
-        console.error("Chat creation failed:", err);
-      } finally {
-        setIsCreatingChat(false);
-      }
-    } else {
-      sendMessage(messageText);
-    }
-  };
+  // Early return after all hooks are called
 
-  const handleProfilePress = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push("/profile");
-  }, [router]);
-
-
-  
-  const renderRedirect = () => (
-    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-      <Text>Redirecting...</Text>
-    </View>
-  );
-
-  // Determine input component to show
   const renderInputComponent = () => {
     if (currentChatId && isTodayChat) {
       return (
@@ -273,8 +268,7 @@ const Chat = () => {
       return (
         <View style={styles.readOnlyOverlay}>
           <Text style={{ color: themeColors.text, textAlign: "center" }}>
-            📖 This chat is from a previous date. You can only view
-            messages.
+            📖 This chat is from a previous date. You can only view messages.
           </Text>
           <TouchableOpacity
             style={styles.todayButton}
@@ -290,9 +284,15 @@ const Chat = () => {
     }
   };
 
-  return !user ? (
-    renderRedirect()
-  ) : (
+  if (!user) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <Text>Redirecting...</Text>
+      </View>
+    );
+  }
+
+  return (
     <View
       style={{ flex: 1, backgroundColor: themeColors.background }}
       {...panResponder.panHandlers}
@@ -325,7 +325,9 @@ const Chat = () => {
             <TouchableOpacity onPress={handleProfilePress} activeOpacity={0.7}>
               {user?.photoBase64 ? (
                 <Image
-                  source={{ uri: `data:image/jpeg;base64,${user?.photoBase64}` }}
+                  source={{
+                    uri: `data:image/jpeg;base64,${user?.photoBase64}`,
+                  }}
                   style={styles.avatar}
                 />
               ) : (

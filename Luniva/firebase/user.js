@@ -9,7 +9,7 @@ import { db } from "./config";
 import { getTodayDateString } from "@/utils/dateUtils";
 
 // Ensure user document exists and handle streak reset
-export async function ensureUserDoc(user, { username = null, dailyChats = [] } = {}) {
+export async function ensureUserDoc(user, extraData = {}) {
   try {
     const ref = doc(db, "users", user.uid);
     const snap = await getDoc(ref);
@@ -19,7 +19,7 @@ export async function ensureUserDoc(user, { username = null, dailyChats = [] } =
       email: user.email ?? "",
       photoURL: user.photoURL ?? null,
       username:
-        username ??
+        extraData.username ??
         (user.displayName?.toLowerCase()?.replace(/\s+/g, "") ?? ""),
       createdAt: serverTimestamp(),
       lastLogin: serverTimestamp(),
@@ -28,46 +28,23 @@ export async function ensureUserDoc(user, { username = null, dailyChats = [] } =
       highestStreak: 0,
       totalDaysChatted: 0,
       totalMessages: 0,
-
-      gender: user.gender ?? null,
-      dob: user.dob ?? null,
+      // ✅ Merge gender/dob from extraData
+      gender: extraData.gender ?? null,
+      dob: extraData.dob ?? null,
     };
 
     if (!snap.exists()) {
       await setDoc(ref, base);
       console.log("✅ User document created");
     } else {
-      const userData = snap.data();
-      const today = getTodayDateString();
-      const yesterday = new Date();
-      yesterday.setDate(yesterday.getDate() - 1);
-      const yesterdayStr = yesterday.toISOString().split("T")[0];
-
-      let lastUpdate = userData.streakUpdatedOn;
-      if (lastUpdate?.toDate) {
-        lastUpdate = lastUpdate.toDate().toISOString().split("T")[0];
-      } else if (typeof lastUpdate === "string") {
-        lastUpdate = lastUpdate.split("T")[0];
-      } else {
-        lastUpdate = null;
-      }
-
-      const updates = { lastLogin: serverTimestamp() };
-
-      // 🔑 check missed-day logic from dailyChats first
-      if (dailyChats.length && shouldResetStreak(dailyChats, today)) {
-        console.log("⚠️ Resetting streak because yesterday was missed");
-        updates.dailyStreak = 0;
-      }
-      // fallback: check gap based on streakUpdatedOn
-      else if (!lastUpdate || (lastUpdate !== today && lastUpdate !== yesterdayStr)) {
-        console.log("⚠️ Resetting streak due to gap:", lastUpdate, "→", today);
-        updates.dailyStreak = 0;
-        updates.streakUpdatedOn = serverTimestamp();
-      }
+      const updates = {
+        lastLogin: serverTimestamp(),
+        gender: extraData.gender ?? snap.data().gender ?? null,
+        dob: extraData.dob ?? snap.data().dob ?? null,
+      };
 
       await updateDoc(ref, updates);
-      console.log("✅ User document updated with streak check");
+      console.log("✅ User document updated with extraData");
     }
   } catch (error) {
     console.error("❌ Error in ensureUserDoc:", error);
