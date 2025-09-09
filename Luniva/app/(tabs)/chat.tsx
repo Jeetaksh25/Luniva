@@ -253,8 +253,6 @@ const Chat = () => {
     flatListRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
 
-  // Early return after all hooks are called
-
   const renderInputComponent = () => {
     if (currentChatId && isTodayChat) {
       return (
@@ -283,14 +281,6 @@ const Chat = () => {
       );
     }
   };
-
-  if (!user) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
-        <Text>Redirecting...</Text>
-      </View>
-    );
-  }
 
   return (
     <View
