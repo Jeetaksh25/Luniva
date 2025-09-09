@@ -21,7 +21,7 @@ import { getTodayDateString, isPastDate } from "@/utils/dateUtils";
 import * as Haptics from "expo-haptics";
 import { router } from "expo-router";
 import ProfileButton from "@/comps/ProfileButton";
-import { modeColor } from "@/theme/modeColor";
+import { useModeColor } from "@/theme/modeColor";
 import ProgressButton from "@/comps/ProgressButton";
 
 const { width } = Dimensions.get("window");
@@ -50,11 +50,13 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
   const chats = useStore((s) => s.chats);
   const loadDailyChats = useStore((s) => s.loadDailyChats);
   const openDailyChat = useStore((s) => s.openDailyChat);
-  const colorScheme = useColorScheme();
-  const themeColors =
-    colorScheme === "dark" ? theme.darkTheme : theme.lightTheme;
+  const themeColors = useModeColor();
 
-  const { user, currentDate, logout } = useStore();
+  const user = useStore((s) => s.user);
+  const currentDate = useStore((s) => s.currentDate);
+  const logout = useStore((s) => s.logout);
+
+  console.log("useModeColor:", useModeColor);
 
   useEffect(() => {
     setStreak(user?.dailyStreak || 0);
@@ -158,7 +160,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
   const openProgress = () => {
     closeSidebar();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    router.push("/");
+    router.push("/progress");
   };
 
   const renderDay = ({ item }: { item: any }) => {
@@ -288,7 +290,8 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                 <Text style={[styles.headerText, { color: themeColors.text }]}>
                   {new Date(year, month).toLocaleString("default", {
                     month: "long",
-                  })}&nbsp;
+                  })}
+                  &nbsp;
                   {year}
                 </Text>
                 <TouchableOpacity

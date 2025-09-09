@@ -1,6 +1,6 @@
 import { Text, View, StyleSheet } from "react-native";
 import React, { FC } from "react";
-import { modeColor } from "../theme/modeColor";
+import { useModeColor } from "../theme/modeColor";
 import { theme } from "../theme/theme";
 import { darkenColor } from "@/functions/darkenColor";
 
@@ -11,12 +11,13 @@ interface InfoTabProps {
 }
 
 const InfoTab: FC<InfoTabProps> = ({ label, value, column = false }) => {
+  const themeColors = useModeColor();
   return (
     <View
       style={[
         styles.container,
         {
-          backgroundColor: darkenColor(modeColor().background, 10),
+          backgroundColor: darkenColor(themeColors.background, 10),
           flexDirection: column ? "column" : "row",
         },
       ]}
@@ -28,7 +29,7 @@ const InfoTab: FC<InfoTabProps> = ({ label, value, column = false }) => {
         style={[
           styles.value,
           {
-            color: modeColor().text,
+            color: themeColors.text,
             textAlign: column ? "left" : "right",
             marginTop: column ? 4 : 0,
           },

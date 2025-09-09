@@ -32,12 +32,10 @@ import DateTimePicker, {
   DateTimePickerAndroid,
 } from "@react-native-community/datetimepicker";
 import { darkenColor } from "@/functions/darkenColor";
-import { modeColor } from "@/theme/modeColor";
+import { useModeColor } from "@/theme/modeColor";
 
 export default function SignUp() {
-  const colorScheme = useColorScheme();
-  const themeColors =
-    colorScheme === "dark" ? theme.darkTheme : theme.lightTheme;
+  const themeColors = useModeColor();
   const router = useRouter();
 
   const [username, setUsername] = useState("");
@@ -109,7 +107,7 @@ export default function SignUp() {
               }
               handleOnChangeText={setUsername}
               containerStyles={{
-                backgroundColor: darkenColor(modeColor().background, 10),
+                backgroundColor: darkenColor(themeColors.background, 10),
               }}
             />
             <CustomInput
@@ -123,14 +121,14 @@ export default function SignUp() {
               }
               handleOnChangeText={setEmail}
               containerStyles={{
-                backgroundColor: darkenColor(modeColor().background, 10),
+                backgroundColor: darkenColor(themeColors.background, 10),
               }}
             />
             <CustomInput
               title="Password"
               handleOnChangeText={setPassword}
               containerStyles={{
-                backgroundColor: darkenColor(modeColor().background, 10),
+                backgroundColor: darkenColor(themeColors.background, 10),
               }}
             />
 
@@ -139,7 +137,7 @@ export default function SignUp() {
                 borderWidth: 1,
                 borderColor: theme.colors.secondaryColor,
                 borderRadius: theme.borderRadius.md,
-                backgroundColor: darkenColor(modeColor().background, 10),
+                backgroundColor: darkenColor(themeColors.background, 10),
               }}
             >
               <Picker
@@ -159,7 +157,7 @@ export default function SignUp() {
                 borderWidth: 1,
                 borderColor: theme.colors.secondaryColor,
                 borderRadius: theme.borderRadius.md,
-                backgroundColor: darkenColor(modeColor().background, 10),
+                backgroundColor: darkenColor(themeColors.background, 10),
                 padding: theme.padding.md,
                 paddingVertical: theme.padding.lg,
               }}

@@ -29,17 +29,17 @@ import { getTodayDateString } from "@/utils/dateUtils";
 import { transformUserMessage } from "@/utils/transformPrompt";
 import * as Haptics from "expo-haptics";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { modeColor } from "@/theme/modeColor";
+import { useModeColor } from "@/theme/modeColor";
+
 import { SafeAreaView } from "react-native-safe-area-context";
 import StatsBubble from "@/comps/StatsBubble";
 
 const Progress = () => {
+  const themeColors = useModeColor();
   return (
     <SafeAreaView>
       <ScrollView>
-        <Text>
-          Progres
-        </Text>
+        <Text>Progres</Text>
       </ScrollView>
     </SafeAreaView>
   );
@@ -47,6 +47,4 @@ const Progress = () => {
 
 export default Progress;
 
-const styles = StyleSheet.create({
-
-})
+const styles = StyleSheet.create({});

@@ -28,16 +28,14 @@ import { getTodayDateString } from "@/utils/dateUtils";
 import { transformUserMessage } from "@/utils/transformPrompt";
 import * as Haptics from "expo-haptics";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { modeColor } from "@/theme/modeColor";
+import { useModeColor } from "@/theme/modeColor";
 
 const { width } = Dimensions.get("window");
 const SWIPE_THRESHOLD = 50;
 
 const Chat = () => {
   const router = useRouter();
-  const colorScheme = useColorScheme();
-  const themeColors =
-    colorScheme === "dark" ? theme.darkTheme : theme.lightTheme;
+  const themeColors = useModeColor();
 
   // ---------------- Store (Always called in same order) ----------------
   const messages = useStore((s) => s.messages) ?? [];
@@ -324,7 +322,7 @@ const Chat = () => {
                 <FontAwesome
                   name="user-circle-o"
                   size={45}
-                  color={modeColor().text}
+                  color={themeColors.text}
                 />
               )}
             </TouchableOpacity>

@@ -1,7 +1,7 @@
 import { Image, Text, View, TouchableOpacity, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { modeColor } from "../theme/modeColor";
+import { useModeColor } from "../theme/modeColor";
 import React, { FC } from "react";
 import { theme } from "../theme/theme";
 import { darkenColor } from "@/functions/darkenColor";
@@ -13,13 +13,13 @@ interface ProfileButtonProps {
 
 const ProfileButton: FC<ProfileButtonProps> = ({ user, onPress }) => {
   console.log("User photo data:", user.photoBase64 ? "Exists" : "Null");
-
+  const themeColors = useModeColor();
   return (
     <TouchableOpacity onPress={onPress}>
       <View
         style={[
           styles.userContainer,
-          { backgroundColor: darkenColor(modeColor().background,20) },
+          { backgroundColor: darkenColor(themeColors.background,20) },
         ]}
       >
         {user.photoBase64 ? (
@@ -34,11 +34,11 @@ const ProfileButton: FC<ProfileButtonProps> = ({ user, onPress }) => {
           <FontAwesome
             name="user-circle-o"
             size={30}
-            color={modeColor().text}
+            color={themeColors.text}
           />
         )}
 
-        <Text style={[styles.username, { color: modeColor().text }]}>
+        <Text style={[styles.username, { color: themeColors.text }]}>
           {user.displayName}
         </Text>
       </View>

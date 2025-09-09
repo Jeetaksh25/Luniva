@@ -20,7 +20,7 @@ import * as ImagePicker from "expo-image-picker";
 import { router } from "expo-router";
 import AntDesign from "@expo/vector-icons/AntDesign";
 import { darkenColor } from "@/functions/darkenColor";
-import { modeColor } from "@/theme/modeColor";
+import { useModeColor } from "@/theme/modeColor";
 import { Picker } from "@react-native-picker/picker";
 import DateTimePicker, {
   DateTimePickerAndroid,
@@ -28,10 +28,7 @@ import DateTimePicker, {
 
 const EditProfile = () => {
   const { user, updateProfilePhoto } = useStore();
-  const colorScheme = useColorScheme();
-  const themeColors =
-    colorScheme === "dark" ? theme.darkTheme : theme.lightTheme;
-
+  const themeColors = useModeColor();
   const [displayName, setDisplayName] = useState(user?.displayName || "");
   const [username, setUsername] = useState(user?.username || "");
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
@@ -163,14 +160,14 @@ const EditProfile = () => {
             title="Display Name"
             handleOnChangeText={setDisplayName}
             containerStyles={{
-              backgroundColor: darkenColor(modeColor().background, 10),
+              backgroundColor: darkenColor(themeColors.background, 10),
             }}
           />
           <CustomInput
             title="Username"
             handleOnChangeText={setUsername}
             containerStyles={{
-              backgroundColor: darkenColor(modeColor().background, 10),
+              backgroundColor: darkenColor(themeColors.background, 10),
             }}
           />
           <View
@@ -178,7 +175,7 @@ const EditProfile = () => {
               borderWidth: 1,
               borderColor: theme.colors.secondaryColor,
               borderRadius: theme.borderRadius.md,
-              backgroundColor: darkenColor(modeColor().background, 10),
+              backgroundColor: darkenColor(themeColors.background, 10),
             }}
           >
             <Picker
@@ -198,7 +195,7 @@ const EditProfile = () => {
               borderWidth: 1,
               borderColor: theme.colors.secondaryColor,
               borderRadius: theme.borderRadius.md,
-              backgroundColor: darkenColor(modeColor().background, 10),
+              backgroundColor: darkenColor(themeColors.background, 10),
               padding: theme.padding.md,
               paddingVertical: theme.padding.lg
             }}
