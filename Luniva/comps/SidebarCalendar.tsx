@@ -23,6 +23,7 @@ import { router } from "expo-router";
 import ProfileButton from "@/comps/ProfileButton";
 import { useModeColor } from "@/theme/modeColor";
 import ProgressButton from "@/comps/ProgressButton";
+import { getStreakPercentage } from "@/utils/StreakPercentage";
 
 const { width } = Dimensions.get("window");
 const SIDEBAR_WIDTH = width * 0.8;
@@ -325,7 +326,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                 ]}
               />
 
-              <ProgressButton onPress={openProgress} />
+              <ProgressButton onPress={openProgress} progress={getStreakPercentage(user.dailyStreak)} />
 
               <ProfileButton user={user} onPress={openProfile} />
             </Animated.View>
