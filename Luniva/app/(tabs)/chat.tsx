@@ -40,18 +40,16 @@ const Chat = () => {
     colorScheme === "dark" ? theme.darkTheme : theme.lightTheme;
 
   // ---------------- Store ----------------
-  const store = useStore();
-  const {
-    messages = [],
-    sendMessage,
-    loadMessages,
-    currentChatId,
-    chats = [],
-    user,
-    handleDateChange,
-    isAiTyping = false,
-    createTodayChat,
-  } = store;
+  const messages = useStore((s) => s.messages) ?? [];
+  const sendMessage = useStore((s) => s.sendMessage);
+  const loadMessages = useStore((s) => s.loadMessages);
+  const currentChatId = useStore((s) => s.currentChatId);
+  const chats = useStore((s) => s.chats) ?? [];
+  const user = useStore((s) => s.user);
+  const handleDateChange = useStore((s) => s.handleDateChange);
+  const isAiTyping = useStore((s) => s.isAiTyping) ?? false;
+  const createTodayChat = useStore((s) => s.createTodayChat);
+  
 
   // ---------------- States & Refs ----------------
   const [keyboardVisible, setKeyboardVisible] = useState(false);
