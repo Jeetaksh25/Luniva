@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -22,7 +22,7 @@ import Feather from "@expo/vector-icons/Feather";
 import ChatBubble from "@/comps/ChatBubble";
 import SidebarCalendar from "@/comps/SidebarCalendar";
 import { useStore } from "@/store/useAppStore";
-import { useRouter, Redirect } from "expo-router";
+import { useRouter } from "expo-router";
 import { useDateChange } from "@/utils/useDateChange";
 import { getTodayDateString } from "@/utils/dateUtils";
 import { transformUserMessage } from "@/utils/transformPrompt";
@@ -34,43 +34,56 @@ const { width } = Dimensions.get("window");
 const SWIPE_THRESHOLD = 50;
 
 const Chat = () => {
-  const [keyboardVisible, setKeyboardVisible] = useState(false);
-  const [isCreatingChat, setIsCreatingChat] = useState(false);
+  const router = useRouter();
   const colorScheme = useColorScheme();
   const themeColors =
     colorScheme === "dark" ? theme.darkTheme : theme.lightTheme;
 
-  const [currentEmoji, setCurrentEmoji] = useState("😀");
-  const fadeAnim = useRef(new Animated.Value(1)).current;
-  const flatListRef = useRef<FlatList>(null);
-  const [sidebarVisible, setSidebarVisible] = useState(false);
-  const [lastAIText, setLastAIText] = useState("");
-
-  const [typingText, setTypingText] = useState("Typing…");
-  const typingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
-  const lastAiIdRef = useRef<string | null>(null);
-
+  // ---------------- Store ----------------
+  const store = useStore();
   const {
-    messages,
+    messages = [],
     sendMessage,
     loadMessages,
     currentChatId,
-    chats,
+    chats = [],
     user,
     handleDateChange,
-    isAiTyping,
-  } = useStore();
+    isAiTyping = false,
+    createTodayChat,
+  } = store;
+
+  // ---------------- States & Refs ----------------
+  const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const [isCreatingChat, setIsCreatingChat] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(false);
+  const [currentEmoji, setCurrentEmoji] = useState("😀");
+  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const flatListRef = useRef<FlatList>(null);
+  const [lastAIText, setLastAIText] = useState("");
+  const [typingText, setTypingText] = useState("Typing…");
+  const typingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const lastAiIdRef = useRef<string | null>(null);
   const [isTodayChat, setIsTodayChat] = useState(true);
-  const router = useRouter();
+  const [isRedirecting, setIsRedirecting] = useState(false);
 
-  useDateChange((newDate: string) => handleDateChange(newDate));
+  
+  useEffect(() => {
+    if (!user) {
+      router.replace("/signin");
+    }
+  }, [user, router]);
 
-  const toggleSidebar = (visible: boolean) => {
+  // ---------------- Date Change Hook ----------------
+  useDateChange(handleDateChange);
+
+  // ---------------- Sidebar Toggle ----------------
+  const toggleSidebar = useCallback((visible: boolean) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSidebarVisible(visible);
-  };
+  }, []);
 
+  // ---------------- Typing Indicator ----------------
   useEffect(() => {
     if (isAiTyping) {
       let i = 0;
@@ -83,16 +96,17 @@ const Chat = () => {
       if (typingTimerRef.current) clearInterval(typingTimerRef.current);
       setTypingText("Typing…");
     }
+
     return () => {
       if (typingTimerRef.current) clearInterval(typingTimerRef.current);
     };
   }, [isAiTyping]);
 
+  // ---------------- Emoji Animation ----------------
   useEffect(() => {
     const latestAI = [...messages].reverse().find((m: any) => m.role === "ai");
     if (!latestAI) return;
 
-    // Trigger when either ID or text changes
     if (latestAI.id !== lastAiIdRef.current || latestAI.text !== lastAIText) {
       lastAiIdRef.current = latestAI.id;
       setLastAIText(latestAI.text);
@@ -102,7 +116,8 @@ const Chat = () => {
         .match(/^(\p{Emoji}|\p{Extended_Pictographic})/u);
       const emoji = match ? match[0] : "🙂";
 
-      fadeAnim.stopAnimation?.();
+      // Stop any ongoing animation
+      fadeAnim.stopAnimation();
       Animated.timing(fadeAnim, {
         toValue: 0,
         duration: 150,
@@ -118,25 +133,21 @@ const Chat = () => {
         }).start();
       });
     }
-  }, [messages, isAiTyping]);
+  }, [messages, isAiTyping, fadeAnim]);
 
+  // ---------------- Pan Responder for Sidebar ----------------
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: (evt, gestureState) => {
-        return evt.nativeEvent.locationX < 30;
-      },
-      onMoveShouldSetPanResponder: (evt, gestureState) => {
-        return evt.nativeEvent.locationX < 30 && gestureState.dx > 5;
-      },
+      onStartShouldSetPanResponder: (evt) => evt.nativeEvent.locationX < 30,
+      onMoveShouldSetPanResponder: (evt, gestureState) =>
+        evt.nativeEvent.locationX < 30 && gestureState.dx > 5,
       onPanResponderMove: (_, gestureState) => {
         if (gestureState.dx > SWIPE_THRESHOLD / 2 && !sidebarVisible) {
-          // Give light feedback while dragging near threshold
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
       },
       onPanResponderRelease: (_, gestureState) => {
         if (gestureState.dx > SWIPE_THRESHOLD) {
-          // Medium feedback once sidebar actually opens
           Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
           setSidebarVisible(true);
         }
@@ -144,7 +155,7 @@ const Chat = () => {
     })
   ).current;
 
-  // Also add this useEffect to handle back button/gesture
+  // ---------------- Back Button ----------------
   useEffect(() => {
     const backAction = () => {
       if (sidebarVisible) {
@@ -153,41 +164,38 @@ const Chat = () => {
       }
       return false;
     };
-
     const backHandler = BackHandler.addEventListener(
       "hardwareBackPress",
       backAction
     );
-
     return () => backHandler.remove();
-  }, [sidebarVisible]);
+  }, [sidebarVisible, toggleSidebar]);
 
-  // Main initialization effect
+  // ---------------- Initialization ----------------
   useEffect(() => {
+    let isMounted = true;
+  
     const init = async () => {
-      const { user } = useStore.getState();
-      if (!user) {
-        router.replace("/signin");
-        return;
-      }
-
-      // Ensure today's chat exists
       if (!currentChatId) {
         setIsCreatingChat(true);
         try {
-          await useStore.getState().createTodayChat();
+          await createTodayChat();
         } catch (err) {
           console.error("Failed to create chat:", err);
         } finally {
-          setIsCreatingChat(false);
+          if (isMounted) setIsCreatingChat(false);
         }
       }
     };
-
+  
     init();
-  }, [currentChatId]);
+  
+    return () => {
+      isMounted = false;
+    };
+  }, [currentChatId, createTodayChat]);
 
-  // Track if current chat is today's
+  // ---------------- Check Today's Chat ----------------
   useEffect(() => {
     const todayStr = getTodayDateString();
     const currentChat = chats.find(
@@ -196,14 +204,14 @@ const Chat = () => {
     setIsTodayChat(currentChat?.date === todayStr);
   }, [currentChatId, chats]);
 
-  // Load messages for current chat
+  // ---------------- Load Messages ----------------
   useEffect(() => {
     if (!currentChatId) return;
     const unsubscribe = loadMessages(currentChatId);
-    return () => unsubscribe && unsubscribe();
-  }, [currentChatId]);
+    return () => unsubscribe?.();
+  }, [currentChatId, loadMessages]);
 
-  // Keyboard listeners
+  // ---------------- Keyboard Listeners ----------------
   useEffect(() => {
     const showSub = Keyboard.addListener("keyboardDidShow", () =>
       setKeyboardVisible(true)
@@ -217,20 +225,18 @@ const Chat = () => {
     };
   }, []);
 
-  // Auto-scroll to latest message
+  // ---------------- Auto-scroll ----------------
   useEffect(() => {
     flatListRef.current?.scrollToEnd({ animated: true });
   }, [messages]);
 
+  // ---------------- Send Message ----------------
   const handleSendMessage = async (messageText: string) => {
     if (!messageText.trim()) return;
-
-    const friendlyPrompt = transformUserMessage(messageText);
-
     if (!currentChatId) {
       setIsCreatingChat(true);
       try {
-        await useStore.getState().createTodayChat();
+        await createTodayChat();
         sendMessage(messageText);
       } catch (err) {
         console.error("Chat creation failed:", err);
@@ -242,31 +248,53 @@ const Chat = () => {
     }
   };
 
-  const animateEmojiChange = (onChangeEmoji: any) => {
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 300,
-      easing: Easing.out(Easing.ease),
-      useNativeDriver: true,
-    }).start(() => {
-      onChangeEmoji();
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        easing: Easing.in(Easing.ease),
-        useNativeDriver: true,
-      }).start();
-    });
-  };
-
-  const handleProfilePress = () => {
+  const handleProfilePress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push("/profile");
+  }, [router]);
+
+
+  
+  const renderRedirect = () => (
+    <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+      <Text>Redirecting...</Text>
+    </View>
+  );
+
+  // Determine input component to show
+  const renderInputComponent = () => {
+    if (currentChatId && isTodayChat) {
+      return (
+        <MessageInput
+          placeholder="Type a message"
+          onSend={handleSendMessage}
+          disable={isCreatingChat}
+        />
+      );
+    } else {
+      return (
+        <View style={styles.readOnlyOverlay}>
+          <Text style={{ color: themeColors.text, textAlign: "center" }}>
+            📖 This chat is from a previous date. You can only view
+            messages.
+          </Text>
+          <TouchableOpacity
+            style={styles.todayButton}
+            onPress={() => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              createTodayChat();
+            }}
+          >
+            <Text style={{ color: "#fff" }}>Go to Today's Chat</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
   };
 
-  if (!user) return <Redirect href="/signin" />;
-
-  return (
+  return !user ? (
+    renderRedirect()
+  ) : (
     <View
       style={{ flex: 1, backgroundColor: themeColors.background }}
       {...panResponder.panHandlers}
@@ -297,9 +325,9 @@ const Chat = () => {
 
           <View style={styles.userProfile}>
             <TouchableOpacity onPress={handleProfilePress} activeOpacity={0.7}>
-              {user.photoBase64 ? (
+              {user?.photoBase64 ? (
                 <Image
-                  source={{ uri: `data:image/jpeg;base64,${user.photoBase64}` }}
+                  source={{ uri: `data:image/jpeg;base64,${user?.photoBase64}` }}
                   style={styles.avatar}
                 />
               ) : (
@@ -384,33 +412,14 @@ const Chat = () => {
             </View>
           )}
 
-          {currentChatId && isTodayChat ? (
-            <MessageInput
-              placeholder="Type a message"
-              onSend={handleSendMessage}
-              disable={isCreatingChat}
-            />
-          ) : (
-            <View style={styles.readOnlyOverlay}>
-              <Text style={{ color: themeColors.text, textAlign: "center" }}>
-                📖 This chat is from a previous date. You can only view
-                messages.
-              </Text>
-              <TouchableOpacity
-                style={styles.todayButton}
-                onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                  useStore.getState().createTodayChat()}}
-              >
-                <Text style={{ color: "#fff" }}>Go to Today's Chat</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          {renderInputComponent()}
         </View>
       </KeyboardAvoidingView>
     </View>
   );
 };
+
+export default Chat;
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
@@ -470,5 +479,3 @@ const styles = StyleSheet.create({
     zIndex: 99,
   },
 });
-
-export default Chat;

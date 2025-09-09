@@ -4,7 +4,6 @@ import { StatusBar } from "expo-status-bar";
 import { useColorScheme } from "react-native";
 import { theme } from "@/theme/theme";
 import { setupDateChangeListener } from "@/services/backgroundService";
-import ToastManager from "toastify-react-native";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -28,7 +27,6 @@ export default function Layout() {
   return (
     <>
       <StatusBar style={colorScheme === "dark" ? "light" : "dark"} />
-      <ToastManager />
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(profile)" options={{ headerShown: false }} />
