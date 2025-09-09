@@ -123,12 +123,12 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   title: {
-    fontSize: theme.fontSize.lg,
+    fontSize: theme.fontSize.xl,
     fontWeight: "800",
     color: "white",
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: theme.fontSize.sm,
     color: "#ffffffcc",
     marginBottom: 6,
   },
