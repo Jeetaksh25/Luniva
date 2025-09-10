@@ -3,6 +3,7 @@ import React, { FC } from "react";
 import { useModeColor } from "@/theme/modeColor";
 import { theme } from "../theme/theme";
 import { darkenColor } from "@/functions/darkenColor";
+import  * as Haptics  from "expo-haptics";
 
 interface StatsBubbleProps {
   label: string;
@@ -12,7 +13,10 @@ interface StatsBubbleProps {
 const StatsBubble: FC<StatsBubbleProps> = ({ label, value }) => {
   const themeColors = useModeColor();
   return (
-    <TouchableOpacity>
+    <TouchableOpacity onPress={()=> {
+      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    }}
+    >
       <View
         style={[
           styles.box,

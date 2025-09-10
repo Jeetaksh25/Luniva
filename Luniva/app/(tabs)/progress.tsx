@@ -55,12 +55,12 @@ const Progress = () => {
     >
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={[styles.PageTitle, { color: themeColors.text }]}>
-          Your Progress Report
+          Your Journey
         </Text>
 
         <View>
           <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
-            Progress Overview
+            Milestone Tracker
           </Text>
           <LinearGradient
             colors={["#FF6F61", "#6A4C93"]}
@@ -76,7 +76,7 @@ const Progress = () => {
                     { color: "white", fontWeight: "bold" },
                   ]}
                 >
-                  Streak Progress
+                  Streak Milestone
                 </Text>
                 <Text style={[styles.pieDetail, { color: "white" }]}>
                   Track how consistent you've been.
@@ -162,7 +162,7 @@ const Progress = () => {
 
         <View>
           <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
-            Last 30 Days Activity
+            30-Day Pulse
           </Text>
           <LinearGradient
             colors={["#FF6F61", "#6A4C93"]}
