@@ -57,8 +57,6 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
   const currentDate = useStore((s) => s.currentDate);
   const logout = useStore((s) => s.logout);
 
-  console.log("useModeColor:", useModeColor);
-
   useEffect(() => {
     setStreak(user?.dailyStreak || 0);
   }, [user]);
@@ -269,7 +267,9 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                 <Text
                   style={[styles.streakSubtext, { color: themeColors.text }]}
                 >
-                  {streak > 0 ? "Keep it going!" : "Start your streak today!"}
+                  {streak > 0
+                    ? "Continue your journey"
+                    : "Begin your journey today"}
                 </Text>
               </View>
 
@@ -282,7 +282,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                     textAlign: "center",
                   }}
                 >
-                  Your Chats This Month
+                  Monthly Conversations
                 </Text>
               </View>
 

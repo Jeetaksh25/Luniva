@@ -40,8 +40,8 @@ const ProgressButton: React.FC<ProgressButtonProps> = ({
       >
         {/* Left Section */}
         <View style={[styles.leftSection, { width: leftWidth }]}>
-          <Text style={styles.title}>Progress</Text>
-          <Text style={styles.subtitle}>Keep pushing 🚀</Text>
+          <Text style={styles.title}>Your Journey</Text>
+          <Text style={styles.subtitle}>You’re doing your best</Text>
 
           {/* Simple Zig-Zag Graph */}
           <Svg height="40" width="100%">
@@ -104,7 +104,7 @@ const ProgressButton: React.FC<ProgressButtonProps> = ({
             color: "white",
           }}
         >
-          Tap to View Stats
+          View Your Journey
         </Text>
       </LinearGradient>
     </TouchableOpacity>
@@ -141,9 +141,10 @@ const styles = StyleSheet.create({
     color: "white",
   },
   subtitle: {
-    fontSize: theme.fontSize.sm,
+    fontSize: theme.fontSize.xs,
     color: "#ffffffcc",
     marginBottom: 6,
+    marginLeft: 4,
   },
   pieText: {
     fontSize: 12,
