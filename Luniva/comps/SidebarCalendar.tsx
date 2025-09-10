@@ -56,7 +56,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
   const user = useStore((s) => s.user);
   const currentDate = useStore((s) => s.currentDate);
   const logout = useStore((s) => s.logout);
-
+  
   useEffect(() => {
     setStreak(user?.dailyStreak || 0);
   }, [user]);

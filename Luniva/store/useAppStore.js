@@ -563,27 +563,32 @@ export const useStore = create((set, get) => ({
       let totalMessages = 0;
       let totalDaysChatted = 0;
       let peakMessages = 0;
-      let streaks = [];
+      let highestStreak = 0;
       let currentStreak = 0;
 
-      // Month stats
       const now = new Date();
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
       let chattingDaysThisMonth = 0;
 
-      // Sort chat dates for streak analysis
-      const sortedDates = Object.keys(allChats).sort();
+      // Sort chat dates ascending
+      const sortedDates = Object.keys(allChats).sort(
+        (a, b) => new Date(a).getTime() - new Date(b).getTime()
+      );
 
-      for (const date of sortedDates) {
-        const chatData = allChats[date];
-        let messageCount = 0;
+      let prevDate = null;
 
-        if (chatData?.messageCount) {
-          messageCount = chatData.messageCount;
-        } else {
+      for (const dateStr of sortedDates) {
+        const chatData = allChats[dateStr];
+
+        // Count messages
+        let messageCount = chatData?.messageCount ?? 0;
+        if (!chatData?.messageCount) {
           const snap = await getDocs(
-            collection(db, "users", user.uid, "chats", date, "messages")
+            collection(db, "users", user.uid, "chats", dateStr, "messages")
           );
           messageCount = snap.size;
         }
@@ -593,7 +598,7 @@ export const useStore = create((set, get) => ({
           totalMessages += messageCount;
           peakMessages = Math.max(peakMessages, messageCount);
 
-          const d = new Date(date);
+          const d = new Date(dateStr);
           if (
             d.getMonth() === currentMonth &&
             d.getFullYear() === currentYear
@@ -601,54 +606,68 @@ export const useStore = create((set, get) => ({
             chattingDaysThisMonth++;
           }
 
-          // streak tracking
-          if (currentStreak === 0) currentStreak = 1;
-          else {
-            const prevDate = new Date(
-              sortedDates[sortedDates.indexOf(date) - 1]
+          // --- streak calculation ---
+          if (prevDate) {
+            const diffDays = Math.round(
+              (d.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
             );
-            const diff =
-              (new Date(date).getTime() - prevDate.getTime()) /
-              (1000 * 60 * 60 * 24);
-            if (diff === 1) {
+
+            if (diffDays === 1) {
               currentStreak++;
-            } else {
-              streaks.push(currentStreak);
+            } else if (diffDays > 1) {
               currentStreak = 1;
             }
+          } else {
+            currentStreak = 1; // first day
           }
+
+          highestStreak = Math.max(highestStreak, currentStreak);
+          prevDate = d;
         }
       }
-      if (currentStreak > 0) streaks.push(currentStreak);
+
+      // Ensure current streak ends on today if the last chat is yesterday or today
+      if (prevDate) {
+        const diffToToday = Math.round(
+          (today.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24)
+        );
+        if (diffToToday > 1) {
+          currentStreak = 0;
+        }
+      }
 
       const avgMessagesPerChat =
         totalDaysChatted > 0 ? Math.round(totalMessages / totalDaysChatted) : 0;
 
-      const avgStreak =
-        streaks.length > 0
-          ? (streaks.reduce((a, b) => a + b, 0) / streaks.length).toFixed(1)
-          : 0;
-
-      const firstChatDate = sortedDates.length
+        const firstChatDate = sortedDates.length
         ? new Date(sortedDates[0])
         : new Date();
-      const daysSinceFirst = (now - firstChatDate) / (1000 * 60 * 60 * 24) + 1;
+      
+      const daysSinceFirst =
+        Math.floor((now.getTime() - firstChatDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+      
       const consistency =
         daysSinceFirst > 0
           ? Math.round((totalDaysChatted / daysSinceFirst) * 100)
           : 0;
-
+          
+      // Update user object in store
       set({
         userStats: {
           totalMessages,
           totalDaysChatted,
           avgMessagesPerChat,
-          currentStreak: user.dailyStreak || 0,
-          highestStreak: user.highestStreak || 0,
+          currentStreak,
+          highestStreak,
           peakMessages,
           chattingDaysThisMonth,
-          avgStreak,
+          avgStreak: highestStreak,
           consistency,
+        },
+        user: {
+          ...user,
+          dailyStreak: currentStreak,
+          highestStreak,
         },
       });
 
@@ -656,9 +675,10 @@ export const useStore = create((set, get) => ({
         totalMessages,
         totalDaysChatted,
         avgMessagesPerChat,
+        currentStreak,
+        highestStreak,
         peakMessages,
         chattingDaysThisMonth,
-        avgStreak,
         consistency,
       });
     } catch (err) {
