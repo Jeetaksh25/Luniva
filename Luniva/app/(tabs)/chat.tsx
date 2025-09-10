@@ -65,10 +65,12 @@ const Chat = () => {
   const lastAiIdRef = useRef<string | null>(null);
 
   const messageInputRef = useRef<any>(null);
-  
+
   const focusMessageInput = useCallback(() => {
     messageInputRef.current?.focus();
-  }, [])
+  }, []);
+
+  const floatAnim = useRef(new Animated.Value(0)).current;
 
   // ---------------- Date Change Hook (Always called) ----------------
   useDateChange(handleDateChange);
@@ -123,6 +125,25 @@ const Chat = () => {
       },
     })
   ).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(floatAnim, {
+          toValue: -10,
+          duration: 1000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(floatAnim, {
+          toValue: 0,
+          duration: 1000,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, []);
 
   // ---------------- Effects (Always called in same order) ----------------
   // User redirect effect
@@ -343,7 +364,10 @@ const Chat = () => {
 
           {messages.length > 0 && (
             <Animated.View
-              style={[styles.emojiContainer, { opacity: fadeAnim }]}
+              style={[
+                styles.emojiContainer,
+                { opacity: fadeAnim, transform: [{ translateY: floatAnim }] },
+              ]}
             >
               <Text
                 style={styles.emoji}
@@ -366,7 +390,6 @@ const Chat = () => {
               )}
             </Animated.View>
           )}
-
           <View style={{ flex: 1 }}>
             {messages.length === 0 ? (
               <EmptyChat
