@@ -19,8 +19,7 @@ export async function ensureUserDoc(user, extraData = {}) {
       email: user.email ?? "",
       photoURL: user.photoURL ?? null,
       username:
-        extraData.username ??
-        (user.displayName?.toLowerCase()?.replace(/\s+/g, "") ?? ""),
+        extraData.username ?? (user.displayName?.toLowerCase()?.replace(/\s+/g, "") ?? ""),
       createdAt: serverTimestamp(),
       lastLogin: serverTimestamp(),
       dailyStreak: 0,
@@ -28,9 +27,8 @@ export async function ensureUserDoc(user, extraData = {}) {
       highestStreak: 0,
       totalDaysChatted: 0,
       totalMessages: 0,
-      // ✅ Merge gender/dob from extraData
-      gender: extraData.gender ?? null,
-      dob: extraData.dob ?? null,
+      gender: extraData.gender?.trim() || null,
+      dob: extraData.dob?.trim() || null,
     };
 
     if (!snap.exists()) {

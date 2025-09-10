@@ -150,34 +150,31 @@ export const useStore = create((set, get) => ({
   // In your useStore
   // In your useStore - FIXED sendMessage function
   sendMessage: async (text) => {
-    const { user, currentChatId, sendAIResponse, chats } = get();
-
-    if (!user || !currentChatId) {
-      console.error("No user or chat ID");
+    const { user, chats, sendAIResponse } = get();
+    if (!user) {
+      console.error("No user found");
       return;
     }
-
-    console.log("Sending message:", text);
 
     const todayStr = getTodayDateString();
-    const currentChat = chats.find((chat) => chat.chatId === currentChatId);
 
-    if (currentChat?.date !== todayStr) {
-      console.error("Cannot send messages to past chats");
-      return;
-    }
+    // Ensure today's chat exists and update currentChatId
+    const newChatId = await getOrCreateDailyChat(user.uid, todayStr);
+    set({ currentChatId: newChatId, currentDate: todayStr });
+
+    // Use the updated currentChatId
+    const chatId = get().currentChatId;
 
     try {
-      // ✅ Save user message first
-      await sendUserMessage(user.uid, currentChatId, text);
+      console.log("Sending message:", text);
+
+      // ✅ Save user message
+      await sendUserMessage(user.uid, chatId, text);
 
       // ✅ Update stats in Firestore
       const userRef = doc(db, "users", user.uid);
-
-      // Increment total messages
       await updateDoc(userRef, { totalMessages: increment(1) });
 
-      // Increment totalDaysChatted (only once per new day)
       const chatRef = doc(db, "users", user.uid, "chats", todayStr);
       const chatSnap = await getDoc(chatRef);
       const chatData = chatSnap.data();
@@ -195,26 +192,13 @@ export const useStore = create((set, get) => ({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: transformUserMessage(text, user),
-                },
-              ],
-            },
-          ],
+          contents: [{ parts: [{ text: transformUserMessage(text, user) }] }],
         }),
       });
 
       const data = await response.json();
-      console.log("AI Raw Response:", JSON.stringify(data, null, 2));
+      if (!response.ok) throw new Error(data.error?.message || "AI API Error");
 
-      if (!response.ok) {
-        throw new Error(data.error?.message || "AI API Error");
-      }
-
-      // Extract AI response text
       const aiText =
         data.candidates?.[0]?.content?.parts?.[0]?.text
           ?.replace(/\*\*(.*?)\*\*/g, "$1")
@@ -222,20 +206,16 @@ export const useStore = create((set, get) => ({
 
       console.log("AI Response:", aiText);
 
-      // Reload chats for today (updates UI)
-      useStore
-        .getState()
-        .loadDailyChats(new Date().getMonth(), new Date().getFullYear());
+      // Reload chats for today
+      get().loadDailyChats(new Date().getMonth(), new Date().getFullYear());
 
       // Save AI message
       await sendAIResponse(aiText);
     } catch (err) {
       console.error("AI Error:", err);
-
-      // Show error in chat
       await sendAIMessage(
         user.uid,
-        currentChatId,
+        chatId,
         "Sorry, I encountered an error. Please try again."
       );
     } finally {
@@ -326,29 +306,31 @@ export const useStore = create((set, get) => ({
     try {
       console.log("Opening daily chat for date:", date);
 
-      // First check if chat exists
-      const chatRef = doc(db, "users", user.uid, "chats", date);
-      const chatSnap = await getDoc(chatRef);
+      const todayStr = getTodayDateString();
 
-      let chatId;
-      if (chatSnap.exists()) {
-        chatId = date;
-        console.log("Chat exists, using ID:", chatId);
-      } else {
-        // Create the chat if it doesn't exist but only for past dates with content
+      // Ensure daily chat exists before opening
+      let chatId = date;
+      const currentChatRef = doc(db, "users", user.uid, "chats", date);
+      const chatSnap = await getDoc(currentChatRef);
+
+      if (!chatSnap.exists()) {
         console.log("Chat doesn't exist, creating...");
         chatId = await getOrCreateDailyChat(user.uid, date);
       }
 
-      set({ currentChatId: chatId });
+      // If opening today's chat, always ensure correct chat
+      if (date === todayStr) {
+        const newChatId = await getOrCreateDailyChat(user.uid, todayStr);
+        chatId = newChatId;
+      }
+
+      set({ currentChatId: chatId, currentDate: date });
 
       // Load messages for this chat
       const unsubscribe = loadMessages(chatId);
-
       return unsubscribe;
     } catch (error) {
       console.error("Error opening daily chat:", error);
-      // Show error to user
       Alert.alert("Error", "Could not open chat for this date");
     }
   },
@@ -455,19 +437,17 @@ export const useStore = create((set, get) => ({
   },
 
   handleDateChange: async (newDate) => {
-    const { user, currentChatId } = get();
+    const { user } = get();
     if (!user) return;
 
     console.log("📅 Date changed to:", newDate);
 
-    // Update current date
-    set({ currentDate: newDate });
+    const todayStr = getTodayDateString();
 
-    // Create new chat for the new day
+    // Ensure chat exists for the new date
     const newChatId = await getOrCreateDailyChat(user.uid, newDate);
 
-    // Always switch to today's chat when date changes
-    set({ currentChatId: newChatId });
+    set({ currentDate: newDate, currentChatId: newChatId });
 
     // Reload chats to update the calendar
     const today = new Date();
@@ -576,29 +556,29 @@ export const useStore = create((set, get) => ({
   updateUserStats: async () => {
     const { user } = get();
     if (!user) return;
-  
+
     try {
       const allChats = await getAllUserChats(user.uid);
-  
+
       let totalMessages = 0;
       let totalDaysChatted = 0;
       let peakMessages = 0;
       let streaks = [];
       let currentStreak = 0;
-  
+
       // Month stats
       const now = new Date();
       const currentMonth = now.getMonth();
       const currentYear = now.getFullYear();
       let chattingDaysThisMonth = 0;
-  
+
       // Sort chat dates for streak analysis
       const sortedDates = Object.keys(allChats).sort();
-  
+
       for (const date of sortedDates) {
         const chatData = allChats[date];
         let messageCount = 0;
-  
+
         if (chatData?.messageCount) {
           messageCount = chatData.messageCount;
         } else {
@@ -607,21 +587,26 @@ export const useStore = create((set, get) => ({
           );
           messageCount = snap.size;
         }
-  
+
         if (messageCount > 0) {
           totalDaysChatted++;
           totalMessages += messageCount;
           peakMessages = Math.max(peakMessages, messageCount);
-  
+
           const d = new Date(date);
-          if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+          if (
+            d.getMonth() === currentMonth &&
+            d.getFullYear() === currentYear
+          ) {
             chattingDaysThisMonth++;
           }
-  
+
           // streak tracking
           if (currentStreak === 0) currentStreak = 1;
           else {
-            const prevDate = new Date(sortedDates[sortedDates.indexOf(date) - 1]);
+            const prevDate = new Date(
+              sortedDates[sortedDates.indexOf(date) - 1]
+            );
             const diff =
               (new Date(date).getTime() - prevDate.getTime()) /
               (1000 * 60 * 60 * 24);
@@ -635,25 +620,24 @@ export const useStore = create((set, get) => ({
         }
       }
       if (currentStreak > 0) streaks.push(currentStreak);
-  
+
       const avgMessagesPerChat =
         totalDaysChatted > 0 ? Math.round(totalMessages / totalDaysChatted) : 0;
-  
+
       const avgStreak =
         streaks.length > 0
           ? (streaks.reduce((a, b) => a + b, 0) / streaks.length).toFixed(1)
           : 0;
-  
+
       const firstChatDate = sortedDates.length
         ? new Date(sortedDates[0])
         : new Date();
-      const daysSinceFirst =
-        (now - firstChatDate) / (1000 * 60 * 60 * 24) + 1;
+      const daysSinceFirst = (now - firstChatDate) / (1000 * 60 * 60 * 24) + 1;
       const consistency =
         daysSinceFirst > 0
           ? Math.round((totalDaysChatted / daysSinceFirst) * 100)
           : 0;
-  
+
       set({
         userStats: {
           totalMessages,
@@ -667,7 +651,7 @@ export const useStore = create((set, get) => ({
           consistency,
         },
       });
-  
+
       console.log("📊 Updated user stats:", {
         totalMessages,
         totalDaysChatted,
