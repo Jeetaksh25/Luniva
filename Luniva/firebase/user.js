@@ -60,10 +60,7 @@ export async function updateUserStreak(uid, chatDate, dailyChats = null) {
     const userRef = doc(db, "users", uid);
     const userSnap = await getDoc(userRef);
 
-    if (!userSnap.exists()) {
-      console.log("❌ User document doesn't exist");
-      return;
-    }
+    if (!userSnap.exists()) return;
 
     const userData = userSnap.data();
     const today = getTodayDateString();
@@ -71,20 +68,16 @@ export async function updateUserStreak(uid, chatDate, dailyChats = null) {
     yesterday.setDate(yesterday.getDate() - 1);
     const yesterdayStr = yesterday.toISOString().split("T")[0];
 
-    let lastStreakUpdate = userData.streakUpdatedOn;
-    if (lastStreakUpdate?.toDate) {
-      lastStreakUpdate = lastStreakUpdate.toDate().toISOString().split("T")[0];
-    } else if (typeof lastStreakUpdate === "string") {
-      lastStreakUpdate = lastStreakUpdate.split("T")[0];
-    } else {
-      lastStreakUpdate = null;
+    let lastStreakUpdate = null;
+    if (userData.streakUpdatedOn?.toDate) {
+      lastStreakUpdate = userData.streakUpdatedOn.toDate().toISOString().split("T")[0];
     }
 
-    // ✅ reset streak if dailyChats shows a missed day
+    // ✅ Reset streak if yesterday was missed
     if (dailyChats && shouldResetStreak(dailyChats, today)) {
       await updateDoc(userRef, {
         dailyStreak: 0,
-        streakUpdatedOn: serverTimestamp()
+        streakUpdatedOn: new Date()
       });
       console.log("⚠️ Resetting streak because yesterday was missed");
       return 0;
@@ -92,24 +85,29 @@ export async function updateUserStreak(uid, chatDate, dailyChats = null) {
 
     console.log("Today:", today, "Chat date:", chatDate, "Last update:", lastStreakUpdate);
 
-    // ✅ increment if today/yesterday
-    // ✅ also allow increment when streak is 0 (fresh reset case)
-    if ((chatDate === today || chatDate === yesterdayStr) &&
-        (lastStreakUpdate !== today || userData.dailyStreak === 0)) {
+    // ✅ Block duplicate increments on same day
+    if (lastStreakUpdate === today) {
+      console.log("⏸ Already updated today, skipping increment");
+      return userData.dailyStreak;
+    }
+
+    // ✅ Increment only if today or yesterday
+    if (chatDate === today || chatDate === yesterdayStr) {
       const newStreak = (userData.dailyStreak || 0) + 1;
       const newHighest = Math.max(newStreak, userData.highestStreak || 0);
 
       await updateDoc(userRef, {
         dailyStreak: newStreak,
         highestStreak: newHighest,
-        streakUpdatedOn: serverTimestamp()
+        streakUpdatedOn: new Date() // store plain date string instead of serverTimestamp()
       });
+
       console.log("✅ Streak updated to:", newStreak);
       return newStreak;
-    } else {
-      console.log("❌ Streak not updated - conditions not met");
-      return userData.dailyStreak || 0;
     }
+
+    console.log("❌ Streak not updated - conditions not met");
+    return userData.dailyStreak || 0;
   } catch (error) {
     console.error("❌ Error updating streak:", error);
     throw error;
