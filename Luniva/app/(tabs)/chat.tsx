@@ -29,6 +29,7 @@ import { transformUserMessage } from "@/utils/transformPrompt";
 import * as Haptics from "expo-haptics";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useModeColor } from "@/theme/modeColor";
+import EmptyChat from "@/comps/EmptyChat";
 
 const { width } = Dimensions.get("window");
 const SWIPE_THRESHOLD = 50;
@@ -62,6 +63,12 @@ const Chat = () => {
   const flatListRef = useRef<FlatList>(null);
   const typingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastAiIdRef = useRef<string | null>(null);
+
+  const messageInputRef = useRef<any>(null);
+  
+  const focusMessageInput = useCallback(() => {
+    messageInputRef.current?.focus();
+  }, [])
 
   // ---------------- Date Change Hook (Always called) ----------------
   useDateChange(handleDateChange);
@@ -255,6 +262,7 @@ const Chat = () => {
     if (currentChatId && isTodayChat) {
       return (
         <MessageInput
+          ref={messageInputRef}
           placeholder="Type a message"
           onSend={handleSendMessage}
           disable={isCreatingChat}
@@ -333,39 +341,40 @@ const Chat = () => {
             onClose={() => toggleSidebar(false)}
           />
 
-          <Animated.View style={[styles.emojiContainer, { opacity: fadeAnim }]}>
-            <Text
-              style={styles.emoji}
-              onPress={() => {
-                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-              }}
+          {messages.length > 0 && (
+            <Animated.View
+              style={[styles.emojiContainer, { opacity: fadeAnim }]}
             >
-              {currentEmoji}
-            </Text>
-            {isAiTyping && (
               <Text
-                style={{
-                  textAlign: "center",
-                  color: themeColors.text,
-                  marginBottom: 8,
+                style={styles.emoji}
+                onPress={() => {
+                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                 }}
               >
-                {typingText}
+                {currentEmoji}
               </Text>
-            )}
-          </Animated.View>
+              {isAiTyping && (
+                <Text
+                  style={{
+                    textAlign: "center",
+                    color: themeColors.text,
+                    marginBottom: 8,
+                  }}
+                >
+                  {typingText}
+                </Text>
+              )}
+            </Animated.View>
+          )}
 
           <View style={{ flex: 1 }}>
             {messages.length === 0 ? (
-              <Text
-                style={{
-                  textAlign: "center",
-                  marginTop: 50,
-                  color: themeColors.text,
+              <EmptyChat
+                onStartChat={async () => {
+                  await createTodayChat();
+                  focusMessageInput();
                 }}
-              >
-                Start chat by typing...
-              </Text>
+              />
             ) : (
               <FlatList
                 ref={flatListRef}

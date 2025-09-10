@@ -1,4 +1,4 @@
-import { useState, FC } from "react";
+import { useState, FC, forwardRef, useImperativeHandle, useRef } from "react";
 import {
   View,
   TextInput,
@@ -16,20 +16,31 @@ import * as Haptics from "expo-haptics";
 interface MessageInputProps {
   placeholder?: string;
   onSend?: (message: string) => void;
-  onChangeText?: (text: string) => void;
   disable?: boolean;
 }
 
-const MessageInput: FC<MessageInputProps> = ({
-  placeholder = "Type a message",
-  onSend,
-  disable = false,
-}) => {
+interface MessageInputRef {
+  focus: () => void;
+  blur: () => void;
+}
+
+const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(
+  ({ placeholder = "Type a message", onSend, disable = false }, ref) => {
   const [message, setMessage] = useState("");
   const [inputHeight, setInputHeight] = useState(40);
   const colorScheme = useColorScheme();
   const themeColors =
     colorScheme === "dark" ? theme.darkTheme : theme.lightTheme;
+
+    const inputRef = useRef<TextInput>(null);
+
+    useImperativeHandle(ref, () => ({
+      focus: () => {
+        inputRef.current?.focus();
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+      },
+      blur: () => inputRef.current?.blur(),
+    }));
 
   return (
     <View
@@ -47,6 +58,7 @@ const MessageInput: FC<MessageInputProps> = ({
             height: Math.min(160, inputHeight),
           },
         ]}
+        ref={inputRef}
         editable={!disable}
         placeholder={placeholder}
         placeholderTextColor={themeColors.text + "99"}
@@ -80,7 +92,7 @@ const MessageInput: FC<MessageInputProps> = ({
       </TouchableOpacity>
     </View>
   );
-};
+});
 
 export default MessageInput;
 
