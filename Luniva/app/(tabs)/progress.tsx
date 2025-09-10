@@ -172,7 +172,7 @@ const Progress = () => {
           >
             <View
               style={{
-                height: 120,
+                height: 100,
                 flexDirection: "row",
                 alignItems: "flex-end",
               }}
@@ -251,29 +251,66 @@ const Progress = () => {
           </LinearGradient>
         </View>
 
-        <View style={styles.statsRow}>
-          <StatsBubble
-            label="Streak"
-            value={`${user.dailyStreak || 0}`}
-          />
-          <StatsBubble
-            label="Highest"
-            value={`${userStats?.highestStreak || 0}`}
-          />
-          <StatsBubble
-            label="Days"
-            value={`${userStats?.totalDaysChatted || 0}`}
-          />
-        </View>
-        <View style={styles.statsRow}>
-          <StatsBubble
-            label="Messages"
-            value={`${userStats?.totalMessages || 0}`}
-          />
-          <StatsBubble
-            label="Avg/Day"
-            value={`${userStats?.avgMessagesPerChat || 0}`}
-          />
+        <View>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+            Highlights
+          </Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statsItem}>
+              <StatsBubble
+                label="Current Streak"
+                value={`${user.dailyStreak || 0}`}
+              />
+            </View>
+            <View style={styles.statsItem}>
+              <StatsBubble
+                label="Highest Streak"
+                value={`${userStats?.highestStreak || 0}`}
+              />
+            </View>
+            <View style={styles.statsItem}>
+              <StatsBubble
+                label="Total Days Chatted"
+                value={`${userStats?.totalDaysChatted || 0}`}
+              />
+            </View>
+            <View style={styles.statsItem}>
+              <StatsBubble
+                label="Total Messages"
+                value={`${userStats?.totalMessages || 0}`}
+              />
+            </View>
+            <View style={styles.statsItem}>
+              <StatsBubble
+                label="Avg Msgs/Chat"
+                value={`${userStats?.avgMessagesPerChat || 0}`}
+              />
+            </View>
+            <View style={styles.statsItem}>
+              <StatsBubble
+                label="Consistency"
+                value={`${userStats?.consistency || 0}%`}
+              />
+            </View>
+            <View style={styles.statsItem}>
+              <StatsBubble
+                label="Avg Streak"
+                value={`${userStats?.avgStreak || 0}`}
+              />
+            </View>
+            <View style={styles.statsItem}>
+              <StatsBubble
+                label="Peak Msgs/Day"
+                value={`${userStats?.peakMessages || 0}`}
+              />
+            </View>
+            <View style={styles.statsItem}>
+              <StatsBubble
+                label="Chats This Month"
+                value={`${userStats?.chattingDaysThisMonth || 0}`}
+              />
+            </View>
+          </View>
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -302,8 +339,14 @@ const styles = StyleSheet.create({
   },
   statsRow: {
     flexDirection: "row",
-    justifyContent: "space-around",
-    marginBottom: 20,
+    flexWrap: "wrap",
+    justifyContent: "space-between",
+    width: "100%",
+  },
+  statsItem: {
+    flexBasis: "32%",
+    marginBottom: 10,
+    alignItems: "center",
   },
   card: {
     borderRadius: theme.borderRadius.lg,

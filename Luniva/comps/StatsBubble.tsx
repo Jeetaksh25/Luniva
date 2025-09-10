@@ -20,7 +20,7 @@ const StatsBubble: FC<StatsBubbleProps> = ({ label, value }) => {
         ]}
       >
         <Text style={styles.value}>{value}</Text>
-        <Text style={[styles.label,{color: themeColors.text}]}>{label}</Text>
+        <Text style={[styles.label, { color: themeColors.text }]}>{label}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -34,21 +34,21 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    width: 60,
-    height: 60,
-    borderRadius: 10,
-    borderWidth: 2,
+    width: 100,
+    height: 100,
+    borderRadius: theme.borderRadius.xl,
+    borderWidth: 3,
     borderColor: theme.colors.primaryColor,
     gap: 4,
   },
   value: {
-    fontSize: 24,
+    fontSize: theme.fontSize["3xl"],
     fontWeight: "700",
     color: theme.colors.primaryColor,
   },
   label: {
-    fontSize: theme.fontSize.xs,
+    fontSize: 10,
     position: "absolute",
-    bottom: 2,
-  }
+    bottom: 5,
+  },
 });

@@ -575,38 +575,84 @@ export const useStore = create((set, get) => ({
   updateUserStats: async () => {
     const { user } = get();
     if (!user) return;
-
+  
     try {
-      // 1. Fetch all user chats
       const allChats = await getAllUserChats(user.uid);
-
+  
       let totalMessages = 0;
       let totalDaysChatted = 0;
-
-      // 2. Loop through all chats
-      for (const [date, chatData] of Object.entries(allChats)) {
-        // Count messages inside this chat
-        const hasMessages = await checkChatHasMessages(user.uid, date);
-        if (hasMessages) {
-          totalDaysChatted++;
-        }
-
+      let peakMessages = 0;
+      let streaks = [];
+      let currentStreak = 0;
+  
+      // Month stats
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+      let chattingDaysThisMonth = 0;
+  
+      // Sort chat dates for streak analysis
+      const sortedDates = Object.keys(allChats).sort();
+  
+      for (const date of sortedDates) {
+        const chatData = allChats[date];
+        let messageCount = 0;
+  
         if (chatData?.messageCount) {
-          totalMessages += chatData.messageCount;
+          messageCount = chatData.messageCount;
         } else {
-          // fallback: count messages collection size
           const snap = await getDocs(
             collection(db, "users", user.uid, "chats", date, "messages")
           );
-          totalMessages += snap.size;
+          messageCount = snap.size;
+        }
+  
+        if (messageCount > 0) {
+          totalDaysChatted++;
+          totalMessages += messageCount;
+          peakMessages = Math.max(peakMessages, messageCount);
+  
+          const d = new Date(date);
+          if (d.getMonth() === currentMonth && d.getFullYear() === currentYear) {
+            chattingDaysThisMonth++;
+          }
+  
+          // streak tracking
+          if (currentStreak === 0) currentStreak = 1;
+          else {
+            const prevDate = new Date(sortedDates[sortedDates.indexOf(date) - 1]);
+            const diff =
+              (new Date(date).getTime() - prevDate.getTime()) /
+              (1000 * 60 * 60 * 24);
+            if (diff === 1) {
+              currentStreak++;
+            } else {
+              streaks.push(currentStreak);
+              currentStreak = 1;
+            }
+          }
         }
       }
-
-      // 3. Compute average messages/day
+      if (currentStreak > 0) streaks.push(currentStreak);
+  
       const avgMessagesPerChat =
         totalDaysChatted > 0 ? Math.round(totalMessages / totalDaysChatted) : 0;
-
-      // 4. Push to store
+  
+      const avgStreak =
+        streaks.length > 0
+          ? (streaks.reduce((a, b) => a + b, 0) / streaks.length).toFixed(1)
+          : 0;
+  
+      const firstChatDate = sortedDates.length
+        ? new Date(sortedDates[0])
+        : new Date();
+      const daysSinceFirst =
+        (now - firstChatDate) / (1000 * 60 * 60 * 24) + 1;
+      const consistency =
+        daysSinceFirst > 0
+          ? Math.round((totalDaysChatted / daysSinceFirst) * 100)
+          : 0;
+  
       set({
         userStats: {
           totalMessages,
@@ -614,13 +660,21 @@ export const useStore = create((set, get) => ({
           avgMessagesPerChat,
           currentStreak: user.dailyStreak || 0,
           highestStreak: user.highestStreak || 0,
+          peakMessages,
+          chattingDaysThisMonth,
+          avgStreak,
+          consistency,
         },
       });
-
+  
       console.log("📊 Updated user stats:", {
         totalMessages,
         totalDaysChatted,
         avgMessagesPerChat,
+        peakMessages,
+        chattingDaysThisMonth,
+        avgStreak,
+        consistency,
       });
     } catch (err) {
       console.error("Error updating stats:", err);
