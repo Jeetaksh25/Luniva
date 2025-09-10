@@ -273,7 +273,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                 </Text>
               </View>
 
-              <View style={{ paddingHorizontal: 20, marginBottom: 20 }}>
+              <View style={{ paddingHorizontal: 20, marginBottom: 15, marginTop: 5 }}>
                 <Text
                   style={{
                     fontSize: theme.fontSize.lg,
