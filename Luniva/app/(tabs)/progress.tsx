@@ -78,13 +78,8 @@ const Progress = () => {
                 <Text style={[styles.pieDetail, { color: themeColors.text }]}>
                   Track how consistent you've been.
                 </Text>
-                <Text
-                  style={[
-                    styles.pieDetail,
-                    { color: theme.colors.warningColor },
-                  ]}
-                >
-                  Current Streak: {user.dailyStreak}
+                <Text style={[styles.pieDetail, { color: themeColors.text }]}>
+                  Current Streak: <Text style={{ fontWeight: "bold", color: theme.colors.warningColor, fontSize: theme.fontSize.md }}>{user.dailyStreak}</Text>
                 </Text>
 
                 <Text
@@ -292,7 +287,7 @@ const styles = StyleSheet.create({
   container: {
     padding: 20,
     paddingBottom: 40,
-    gap: 10,
+    gap: 30,
   },
   sectionTitle: {
     fontSize: theme.fontSize.lg,
@@ -303,7 +298,6 @@ const styles = StyleSheet.create({
   PageTitle: {
     fontSize: theme.fontSize["2xl"],
     fontWeight: "700",
-    marginBottom: 30,
     textAlign: "center",
   },
   statsRow: {
@@ -314,10 +308,9 @@ const styles = StyleSheet.create({
   card: {
     borderRadius: theme.borderRadius.lg,
     padding: 10,
-    marginBottom: 25,
     alignItems: "center",
     borderColor: theme.colors.primaryColor,
-    borderWidth: 2,
+    borderWidth: 3,
     justifyContent: "center",
   },
   pieContainer: {
