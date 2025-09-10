@@ -50,7 +50,10 @@ export const useStore = create((set, get) => ({
             const unsubscribeUser = onSnapshot(userRef, (doc) => {
               if (doc.exists()) {
                 const userData = doc.data();
-                console.log("🔥 User data updated - streak:", userData.dailyStreak);
+                console.log(
+                  "🔥 User data updated - streak:",
+                  userData.dailyStreak
+                );
                 set({ user: { ...user, ...userData } });
                 get().updateUserStats(); // Update stats when user data changes
               }
@@ -80,17 +83,17 @@ export const useStore = create((set, get) => ({
     set({ loading: true, error: null });
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
-  
+
       if (displayName && displayName.trim() !== "") {
         await updateProfile(cred.user, { displayName: displayName.trim() });
       }
-  
+
       // Merge extra profile data into Firestore doc
       await ensureUserDoc(cred.user, {
         username: displayName || cred.user.uid,
         ...extraData,
       });
-  
+
       set({ user: cred.user, loading: false });
     } catch (error) {
       console.error("Signup error:", error);
@@ -111,17 +114,17 @@ export const useStore = create((set, get) => ({
 
   logout: async () => {
     const { unsubscribeUser, unsubscribeMessages } = get();
-  
+
     // ✅ First unsubscribe from ALL listeners
     if (unsubscribeUser) unsubscribeUser();
     if (unsubscribeMessages) unsubscribeMessages();
-    
+
     // ✅ Also check if there are any other listeners that might be active
     // For example, if you have chat listeners in other components
-    
+
     // ✅ THEN sign out
     await signOut(auth);
-  
+
     set({
       user: null,
       chats: [],
@@ -214,34 +217,34 @@ export const useStore = create((set, get) => ({
   loadDailyChats: async (month, year) => {
     const { user } = get();
     if (!user) return;
-  
+
     const today = new Date();
     const currentMonth = month ?? today.getMonth();
     const currentYear = year ?? today.getFullYear();
-    
+
     // Get ALL chats regardless of month
     const allChats = await getAllUserChats(user.uid);
-    
+
     const dailyChats = [];
     const todayStr = getTodayDateString();
     const todayDate = new Date(todayStr);
     todayDate.setHours(0, 0, 0, 0);
-  
+
     // Load dates for the current month PLUS any dates from previous months that have chats
     const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-  
+
     for (let day = 1; day <= daysInMonth; day++) {
       const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-      
+
       const chatData = allChats[dateStr];
       let status = "upcoming";
       const chatDate = new Date(dateStr);
       chatDate.setHours(0, 0, 0, 0);
-  
+
       // Check if this chat exists
       if (chatData) {
         const hasMessages = await checkChatHasMessages(user.uid, dateStr);
-        
+
         if (hasMessages) {
           status = "done";
         } else if (chatDate < todayDate) {
@@ -254,35 +257,35 @@ export const useStore = create((set, get) => ({
       } else if (chatDate.getTime() === todayDate.getTime()) {
         status = "pending";
       }
-  
-      dailyChats.push({ 
-        date: dateStr, 
-        chatId: chatData ? dateStr : null, 
-        status 
+
+      dailyChats.push({
+        date: dateStr,
+        chatId: chatData ? dateStr : null,
+        status,
       });
     }
-  
+
     // ADD THIS: Also include any chats from previous months that exist
     Object.keys(allChats).forEach(async (dateStr) => {
       // Skip if already included in current month
-      if (dailyChats.find(chat => chat.date === dateStr)) return;
-      
+      if (dailyChats.find((chat) => chat.date === dateStr)) return;
+
       // Only include past dates that have messages
       const chatDate = new Date(dateStr);
       chatDate.setHours(0, 0, 0, 0);
-      
+
       if (chatDate < todayDate) {
         const hasMessages = await checkChatHasMessages(user.uid, dateStr);
         if (hasMessages) {
           dailyChats.push({
             date: dateStr,
             chatId: dateStr,
-            status: "done"
+            status: "done",
           });
         }
       }
     });
-  
+
     console.log("📅 Loaded daily chats:", dailyChats);
     set({ chats: dailyChats });
   },
@@ -547,12 +550,12 @@ export const useStore = create((set, get) => ({
       set({ userStats: null });
       return;
     }
-    
+
     const avgMessagesPerChat =
       user.totalDaysChatted > 0
         ? (user.totalMessages || 0) / user.totalDaysChatted
         : 0;
-  
+
     const stats = {
       currentStreak: user.dailyStreak || 0,
       highestStreak: user.highestStreak || 0,
@@ -560,7 +563,7 @@ export const useStore = create((set, get) => ({
       totalMessages: user.totalMessages || 0,
       avgMessagesPerChat: Math.round(avgMessagesPerChat * 100) / 100,
     };
-    
+
     set({ userStats: stats });
   },
 }));

@@ -77,7 +77,7 @@ const ProgressButton: React.FC<ProgressButtonProps> = ({
               strokeDasharray="282.6"
               strokeDashoffset={282.6 * (1 - progress.percentage / 100)}
               strokeLinecap="round"
-              rotation="-90"
+              rotation="-85"
               origin="50,50" // rotate around center
             />
           </Svg>

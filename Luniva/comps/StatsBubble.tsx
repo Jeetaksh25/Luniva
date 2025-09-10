@@ -1,6 +1,6 @@
 import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
 import React, { FC } from "react";
-import { modeColor } from "../theme/modeColor";
+import { useModeColor } from "@/theme/modeColor";
 import { theme } from "../theme/theme";
 import { darkenColor } from "@/functions/darkenColor";
 
@@ -10,16 +10,17 @@ interface StatsBubbleProps {
 }
 
 const StatsBubble: FC<StatsBubbleProps> = ({ label, value }) => {
+  const themeColors = useModeColor();
   return (
     <TouchableOpacity>
       <View
         style={[
           styles.box,
-          { backgroundColor: darkenColor(modeColor().background, 10) },
+          { backgroundColor: darkenColor(themeColors.background, 10) },
         ]}
       >
         <Text style={styles.value}>{value}</Text>
-        <Text style={styles.label}>{label}</Text>
+        <Text style={[styles.label,{color: themeColors.text}]}>{label}</Text>
       </View>
     </TouchableOpacity>
   );
@@ -33,11 +34,12 @@ const styles = StyleSheet.create({
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-    width: 100,
-    height: 100,
+    width: 60,
+    height: 60,
     borderRadius: 10,
     borderWidth: 2,
     borderColor: theme.colors.primaryColor,
+    gap: 4,
   },
   value: {
     fontSize: 24,
