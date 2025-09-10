@@ -18,10 +18,18 @@ import {
   checkChatHasMessages,
   getAllUserChats,
 } from "../firebase/chat";
-import { doc, getDoc, setDoc, onSnapshot } from "firebase/firestore";
+import {
+  doc,
+  getDocs,
+  setDoc,
+  onSnapshot,
+  collection,
+  updateDoc,
+} from "firebase/firestore";
 import { db } from "../firebase/config";
 import { getTodayDateString, isToday } from "@/utils/dateUtils";
 import { transformUserMessage } from "@/utils/transformPrompt";
+import { increment } from "firebase/firestore";
 
 const API_KEY = "AIzaSyApCBdx6xDwRZhWFEqT7CsGwnvp1mkVEhg";
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
@@ -141,7 +149,7 @@ export const useStore = create((set, get) => ({
   // In your useStore
   // In your useStore - FIXED sendMessage function
   sendMessage: async (text) => {
-    const { user, currentChatId, sendAIResponse, chats } = get(); // Added chats here
+    const { user, currentChatId, sendAIResponse, chats } = get();
 
     if (!user || !currentChatId) {
       console.error("No user or chat ID");
@@ -150,7 +158,7 @@ export const useStore = create((set, get) => ({
 
     console.log("Sending message:", text);
 
-    const todayStr = getTodayDateString(); // Use utility here
+    const todayStr = getTodayDateString();
     const currentChat = chats.find((chat) => chat.chatId === currentChatId);
 
     if (currentChat?.date !== todayStr) {
@@ -159,11 +167,29 @@ export const useStore = create((set, get) => ({
     }
 
     try {
-      // Save user message first
+      // ✅ Save user message first
       await sendUserMessage(user.uid, currentChatId, text);
 
+      // ✅ Update stats in Firestore
+      const userRef = doc(db, "users", user.uid);
+
+      // Increment total messages
+      await updateDoc(userRef, { totalMessages: increment(1) });
+
+      // Increment totalDaysChatted (only once per new day)
+      const chatRef = doc(db, "users", user.uid, "chats", todayStr);
+      const chatSnap = await getDoc(chatRef);
+      const chatData = chatSnap.data();
+
+      if (chatData && !chatData.firstMessageLogged) {
+        await updateDoc(userRef, { totalDaysChatted: increment(1) });
+        await updateDoc(chatRef, { firstMessageLogged: true });
+      }
+
+      // ✅ Show typing indicator
       set({ isAiTyping: true });
-      // Use Gemini API
+
+      // ✅ Send to Gemini API
       const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -195,15 +221,17 @@ export const useStore = create((set, get) => ({
 
       console.log("AI Response:", aiText);
 
+      // Reload chats for today (updates UI)
       useStore
         .getState()
         .loadDailyChats(new Date().getMonth(), new Date().getFullYear());
 
-      // Save AI message to Firestore
+      // Save AI message
       await sendAIResponse(aiText);
     } catch (err) {
       console.error("AI Error:", err);
-      // Add error message to chat
+
+      // Show error in chat
       await sendAIMessage(
         user.uid,
         currentChatId,
@@ -544,26 +572,58 @@ export const useStore = create((set, get) => ({
       console.error("❌ Error updating profile photo:", error);
     }
   },
-  updateUserStats: () => {
+  updateUserStats: async () => {
     const { user } = get();
-    if (!user) {
-      set({ userStats: null });
-      return;
+    if (!user) return;
+
+    try {
+      // 1. Fetch all user chats
+      const allChats = await getAllUserChats(user.uid);
+
+      let totalMessages = 0;
+      let totalDaysChatted = 0;
+
+      // 2. Loop through all chats
+      for (const [date, chatData] of Object.entries(allChats)) {
+        // Count messages inside this chat
+        const hasMessages = await checkChatHasMessages(user.uid, date);
+        if (hasMessages) {
+          totalDaysChatted++;
+        }
+
+        if (chatData?.messageCount) {
+          totalMessages += chatData.messageCount;
+        } else {
+          // fallback: count messages collection size
+          const snap = await getDocs(
+            collection(db, "users", user.uid, "chats", date, "messages")
+          );
+          totalMessages += snap.size;
+        }
+      }
+
+      // 3. Compute average messages/day
+      const avgMessagesPerChat =
+        totalDaysChatted > 0 ? Math.round(totalMessages / totalDaysChatted) : 0;
+
+      // 4. Push to store
+      set({
+        userStats: {
+          totalMessages,
+          totalDaysChatted,
+          avgMessagesPerChat,
+          currentStreak: user.dailyStreak || 0,
+          highestStreak: user.highestStreak || 0,
+        },
+      });
+
+      console.log("📊 Updated user stats:", {
+        totalMessages,
+        totalDaysChatted,
+        avgMessagesPerChat,
+      });
+    } catch (err) {
+      console.error("Error updating stats:", err);
     }
-
-    const avgMessagesPerChat =
-      user.totalDaysChatted > 0
-        ? (user.totalMessages || 0) / user.totalDaysChatted
-        : 0;
-
-    const stats = {
-      currentStreak: user.dailyStreak || 0,
-      highestStreak: user.highestStreak || 0,
-      totalDaysChatted: user.totalDaysChatted || 0,
-      totalMessages: user.totalMessages || 0,
-      avgMessagesPerChat: Math.round(avgMessagesPerChat * 100) / 100,
-    };
-
-    set({ userStats: stats });
   },
 }));

@@ -62,30 +62,42 @@ const Progress = () => {
           <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
             Progress Overview
           </Text>
-          <View
-            style={[styles.card, { backgroundColor: themeColors.background }]}
+          <LinearGradient
+            colors={["#FF6F61", "#6A4C93"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.card}
           >
             <View style={styles.pieRow}>
               <View style={styles.pieDescription}>
                 <Text
                   style={[
                     styles.pieTitle,
-                    { color: theme.colors.secondaryColor },
+                    { color: "white", fontWeight: "bold" },
                   ]}
                 >
                   Streak Progress
                 </Text>
-                <Text style={[styles.pieDetail, { color: themeColors.text }]}>
+                <Text style={[styles.pieDetail, { color: "white" }]}>
                   Track how consistent you've been.
                 </Text>
-                <Text style={[styles.pieDetail, { color: themeColors.text }]}>
-                  Current Streak: <Text style={{ fontWeight: "bold", color: theme.colors.warningColor, fontSize: theme.fontSize.md }}>{user.dailyStreak}</Text>
+                <Text style={[styles.pieDetail, { color: "white" }]}>
+                  Current Streak:{" "}
+                  <Text
+                    style={{
+                      fontWeight: "bold",
+                      color: theme.colors.warningColor,
+                      fontSize: theme.fontSize.md,
+                    }}
+                  >
+                    {user.dailyStreak}
+                  </Text>
                 </Text>
 
                 <Text
                   style={[
                     {
-                      color: theme.colors.infoColor,
+                      color: "white",
                       fontSize: 8,
                       position: "absolute",
                       bottom: -40,
@@ -125,27 +137,19 @@ const Progress = () => {
                 <View style={styles.pieCenter}>
                   {progress.milestone > 0 ? (
                     <>
-                      <Text
-                        style={[styles.pieText, { color: themeColors.text }]}
-                      >
+                      <Text style={[styles.pieText, { color: "white" }]}>
                         {progress.percentage}%
                       </Text>
-                      <Text
-                        style={[styles.pieSubText, { color: themeColors.text }]}
-                      >
+                      <Text style={[styles.pieSubText, { color: "white" }]}>
                         {progress.milestone} days
                       </Text>
                     </>
                   ) : (
                     <>
-                      <Text
-                        style={[styles.pieText, { color: themeColors.text }]}
-                      >
+                      <Text style={[styles.pieText, { color: "white" }]}>
                         0%
                       </Text>
-                      <Text
-                        style={[styles.pieSubText, { color: themeColors.text }]}
-                      >
+                      <Text style={[styles.pieSubText, { color: "white" }]}>
                         0 days
                       </Text>
                     </>
@@ -153,15 +157,18 @@ const Progress = () => {
                 </View>
               </View>
             </View>
-          </View>
+          </LinearGradient>
         </View>
 
         <View>
           <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
             Last 30 Days Activity
           </Text>
-          <View
-            style={[styles.card, { backgroundColor: themeColors.background }]}
+          <LinearGradient
+            colors={["#FF6F61", "#6A4C93"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.card}
           >
             <View
               style={{
@@ -178,7 +185,7 @@ const Progress = () => {
                   style={[
                     styles.graphLabel,
                     {
-                      color: theme.colors.successColor,
+                      color: "white",
                       position: "absolute",
                       top: -80,
                       left: 0,
@@ -191,7 +198,7 @@ const Progress = () => {
                   style={[
                     styles.graphLabel,
                     {
-                      color: theme.colors.errorColor,
+                      color: "white",
                       position: "absolute",
                       bottom: 10,
                       left: 0,
@@ -206,7 +213,7 @@ const Progress = () => {
                 <Svg height="80" width={screenWidth}>
                   <Path
                     d={zigzagPath}
-                    stroke={theme.colors.successColor}
+                    stroke={theme.colors.infoColor}
                     strokeWidth="3"
                     fill="none"
                   />
@@ -222,13 +229,13 @@ const Progress = () => {
                 width: "100%",
               }}
             >
-              <Text style={[styles.graphLabel, { color: themeColors.text }]}>
+              <Text style={[styles.graphLabel, { color: "white" }]}>
                 {startDate.toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
                 })}
               </Text>
-              <Text style={[styles.graphLabel, { color: themeColors.text }]}>
+              <Text style={[styles.graphLabel, { color: "white" }]}>
                 {endDate.toLocaleDateString("en-US", {
                   month: "short",
                   day: "numeric",
@@ -238,23 +245,16 @@ const Progress = () => {
             </View>
 
             <Text style={styles.graphHint}>
-              <Text style={{ color: theme.colors.successColor }}>
-                {" "}
-                High = Done
-              </Text>
-              ,
-              <Text style={{ color: theme.colors.errorColor }}>
-                {" "}
-                Low = Missed
-              </Text>{" "}
+              <Text style={{ color: "white" }}> High = Done</Text>,
+              <Text style={{ color: "white" }}> Low = Missed</Text>{" "}
             </Text>
-          </View>
+          </LinearGradient>
         </View>
 
         <View style={styles.statsRow}>
           <StatsBubble
             label="Streak"
-            value={`${userStats?.currentStreak || 0}`}
+            value={`${user.dailyStreak || 0}`}
           />
           <StatsBubble
             label="Highest"
@@ -309,8 +309,6 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.lg,
     padding: 10,
     alignItems: "center",
-    borderColor: theme.colors.primaryColor,
-    borderWidth: 3,
     justifyContent: "center",
   },
   pieContainer: {
@@ -331,7 +329,7 @@ const styles = StyleSheet.create({
   graphHint: {
     fontSize: theme.fontSize.xs,
     marginTop: 10,
-    color: theme.colors.infoColor,
+    color: "white",
   },
   pieSubText: {
     fontSize: 14,
