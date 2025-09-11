@@ -295,23 +295,26 @@ const Chat = () => {
             📖 This chat is from a previous date. You can only view messages.
           </Text>
           <TouchableOpacity
-  style={styles.todayButton}
-  disabled={isCreatingChat || loadingChat}
-  onPress={async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    try {
-      const newId = await createTodayChat();
-      // focus the input if it's now created
-      focusMessageInput();
-      // If needed, mark it as today's chat in local state
-      setIsTodayChat(true);
-    } catch (err) {
-      console.error("Could not create today's chat on button press:", err);
-    }
-  }}
->
-  <Text style={{ color: "#fff" }}>Go to Today's Chat</Text>
-</TouchableOpacity>
+            style={styles.todayButton}
+            disabled={isCreatingChat || loadingChat}
+            onPress={async () => {
+              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+              try {
+                const newId = await createTodayChat();
+                // focus the input if it's now created
+                focusMessageInput();
+                // If needed, mark it as today's chat in local state
+                setIsTodayChat(true);
+              } catch (err) {
+                console.error(
+                  "Could not create today's chat on button press:",
+                  err
+                );
+              }
+            }}
+          >
+            <Text style={{ color: "#fff" }}>Go to Today's Chat</Text>
+          </TouchableOpacity>
         </View>
       );
     }
