@@ -3,7 +3,6 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Animated,
   StyleSheet,
   Dimensions,
   FlatList,
@@ -24,6 +23,12 @@ import ProfileButton from "@/comps/ProfileButton";
 import { useModeColor } from "@/theme/modeColor";
 import ProgressButton from "@/comps/ProgressButton";
 import { getStreakPercentage } from "@/utils/StreakPercentage";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  runOnJS,
+} from "react-native-reanimated";
 
 const { width } = Dimensions.get("window");
 const SIDEBAR_WIDTH = width * 0.8;
@@ -42,7 +47,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
   visible,
   onClose,
 }) => {
-  const [translateX] = useState(new Animated.Value(-SIDEBAR_WIDTH));
+  const translateX = useSharedValue(-SIDEBAR_WIDTH);
   const [month, setMonth] = useState(new Date().getMonth());
   const [year, setYear] = useState(new Date().getFullYear());
   const [streak, setStreak] = useState(0);
@@ -56,7 +61,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
   const user = useStore((s) => s.user);
   const currentDate = useStore((s) => s.currentDate);
   const logout = useStore((s) => s.logout);
-  
+
   useEffect(() => {
     setStreak(user?.dailyStreak || 0);
   }, [user]);
@@ -69,58 +74,53 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
     calculateFirstChatDate();
   }, [currentDate]);
 
+  useEffect(() => {
+    if (visible) {
+      translateX.value = withTiming(0, { duration: 300 });
+    } else {
+      translateX.value = withTiming(-SIDEBAR_WIDTH, { duration: 300 });
+    }
+  }, [visible]);
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
+
   const panResponder = PanResponder.create({
     onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: (_, gestureState) => {
-      return Math.abs(gestureState.dx) > 5;
-    },
+    onMoveShouldSetPanResponder: (_, gestureState) =>
+      Math.abs(gestureState.dx) > 5,
+
     onPanResponderMove: (_, gestureState) => {
+      // Drag only to the right
       if (gestureState.dx > 0) {
-        translateX.setValue(Math.min(0, -SIDEBAR_WIDTH + gestureState.dx));
+        translateX.value = Math.min(0, -SIDEBAR_WIDTH + gestureState.dx);
       }
     },
+
     onPanResponderRelease: (_, gestureState) => {
       if (gestureState.dx > SWIPE_THRESHOLD) {
+        // Close sidebar if dragged past threshold
         closeSidebar();
       } else {
-        Animated.spring(translateX, {
-          toValue: 0,
-          useNativeDriver: true,
-          friction: 8,
-          tension: 40,
-        }).start();
+        // Snap back to open
+        translateX.value = withTiming(0, { duration: 200 });
       }
     },
+
     onPanResponderTerminate: () => {
-      Animated.spring(translateX, {
-        toValue: 0,
-        useNativeDriver: true,
-        friction: 8,
-        tension: 40,
-      }).start();
+      // Snap back if gesture interrupted
+      translateX.value = withTiming(0, { duration: 200 });
     },
+
     onPanResponderTerminationRequest: () => false,
   });
 
   const closeSidebar = () => {
-    Animated.timing(translateX, {
-      toValue: -SIDEBAR_WIDTH,
-      duration: 300,
-      useNativeDriver: true,
-    }).start(() => {
-      onClose();
+    translateX.value = withTiming(-SIDEBAR_WIDTH, { duration: 300 }, () => {
+      runOnJS(onClose)();
     });
   };
-
-  useEffect(() => {
-    if (visible) {
-      Animated.timing(translateX, {
-        toValue: 0,
-        duration: 300,
-        useNativeDriver: true,
-      }).start();
-    }
-  }, [visible]);
 
   const calculateFirstChatDate = () => {
     const doneChats = chats.filter((chat: any) => chat.status === "done");
@@ -273,7 +273,13 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                 </Text>
               </View>
 
-              <View style={{ paddingHorizontal: 20, marginBottom: 15, marginTop: 5 }}>
+              <View
+                style={{
+                  paddingHorizontal: 20,
+                  marginBottom: 15,
+                  marginTop: 5,
+                }}
+              >
                 <Text
                   style={{
                     fontSize: theme.fontSize.lg,

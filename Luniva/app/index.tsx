@@ -5,9 +5,10 @@ import {
   SafeAreaView,
   Image,
   StyleSheet,
-  Animated,
-  Easing,
 } from "react-native";
+import Animated, { useSharedValue, useAnimatedStyle, withTiming, Easing, runOnJS, } from 'react-native-reanimated';
+
+
 
 import { useRouter, Redirect } from "expo-router";
 import CustomButton from "@/comps/CustomButton";
@@ -40,26 +41,19 @@ export default function FirstScreen() {
   }, [initAuth]);
 
   const [currentEmoji, setCurrentEmoji] = useState("😀");
-  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const fade = useSharedValue(1);
 
   const getRandomEmoji = () =>
     Emojis[Math.floor(Math.random() * Emojis.length)];
 
-  const animateEmojiChange = (onChangeEmoji: any) => {
-    Animated.timing(fadeAnim, {
-      toValue: 0,
-      duration: 300,
-      easing: Easing.out(Easing.ease),
-      useNativeDriver: true,
-    }).start(() => {
-      onChangeEmoji();
-
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 300,
-        easing: Easing.in(Easing.ease),
-        useNativeDriver: true,
-      }).start();
+  const animatedStyle = useAnimatedStyle(() => ({
+    opacity: fade.value,
+  }));
+  
+  const animateEmojiChange = (onChangeEmoji: () => void) => {
+    fade.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.ease) }, () => {
+      runOnJS(onChangeEmoji)();
+      fade.value = withTiming(1, { duration: 300, easing: Easing.in(Easing.ease) });
     });
   };
 
@@ -126,7 +120,7 @@ export default function FirstScreen() {
         <StatusBar style="light" />
         <View style={styles.innerContainer}>
           <Animated.Text
-            style={[styles.emoji, { opacity: fadeAnim }]}
+            style={[styles.emoji, animatedStyle]}
             onPress={onEmojiPress}
           >
             {currentEmoji}

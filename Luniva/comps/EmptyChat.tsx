@@ -1,45 +1,41 @@
-import React, { useRef, useEffect } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  Animated,
-  TouchableOpacity,
-  Image,
-} from "react-native";
-import { useModeColor } from "@/theme/modeColor";
+import React, { useEffect } from "react";
+import { View, Text, StyleSheet } from "react-native";
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withRepeat,
+  Easing,
+} from "react-native-reanimated";
 import * as Haptics from "expo-haptics";
-import { router } from "expo-router";
 import CustomButton from "./CustomButton";
+import { useModeColor } from "@/theme/modeColor";
 
 interface EmptyChatProps {
-    onStartChat: () => void;
+  onStartChat: () => void;
 }
 
 const EmptyChat: React.FC<EmptyChatProps> = ({ onStartChat }) => {
   const themeColors = useModeColor();
 
-  // Floating animation for emoji/friend illustration
-  const floatAnim = useRef(new Animated.Value(0)).current;
+  // Shared value for floating animation
+  const float = useSharedValue(0);
 
-  const currentEmoji = "😀";
+  // Animated style
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: float.value }],
+  }));
 
   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(floatAnim, {
-          toValue: -10,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(floatAnim, {
-          toValue: 0,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
+    // Looping floating animation
+    float.value = withRepeat(
+      withTiming(-10, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true // reverse each time
+    );
   }, []);
+
+  const currentEmoji = "😀";
 
   const startChat = () => {
     Haptics.selectionAsync();
@@ -47,10 +43,8 @@ const EmptyChat: React.FC<EmptyChatProps> = ({ onStartChat }) => {
   };
 
   return (
-    <View
-      style={[styles.container, { backgroundColor: themeColors.background }]}
-    >
-      <Animated.View style={{ transform: [{ translateY: floatAnim }] }}>
+    <View style={[styles.container, { backgroundColor: themeColors.background }]}>
+      <Animated.View style={animatedStyle}>
         <Text
           style={styles.emoji}
           onPress={() => {
@@ -65,8 +59,7 @@ const EmptyChat: React.FC<EmptyChatProps> = ({ onStartChat }) => {
         Hi there! I’m Luniva 🌙
       </Text>
       <Text style={[styles.subtitle, { color: themeColors.secondaryText }]}>
-        I’m here to listen, guide, and cheer you up. Your thoughts are safe with
-        me.
+        I’m here to listen, guide, and cheer you up. Your thoughts are safe with me.
       </Text>
 
       <CustomButton title="Start Chatting" handlePress={startChat} />
@@ -81,11 +74,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 20,
   },
-  friendImage: {
-    width: 140,
-    height: 140,
-    marginBottom: 20,
-  },
   title: {
     fontSize: 24,
     fontWeight: "bold",
@@ -97,16 +85,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 30,
     lineHeight: 22,
-  },
-  button: {
-    paddingVertical: 14,
-    paddingHorizontal: 28,
-    borderRadius: 30,
-    elevation: 2,
-  },
-  buttonText: {
-    fontSize: 16,
-    fontWeight: "600",
   },
   emoji: {
     fontSize: 100,

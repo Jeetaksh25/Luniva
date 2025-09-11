@@ -12,6 +12,7 @@ import React, { FC, useState } from "react";
 import { theme } from "../theme/theme";
 import * as Haptics from "expo-haptics";
 import AntDesign from "@expo/vector-icons/AntDesign";
+import { Pressable } from "react-native";
 
 interface CustomInputProps {
   title: string;
@@ -77,16 +78,13 @@ const CustomInput: FC<CustomInputProps> = ({
 
       {/* Show/Hide Password Eye */}
       {isPasswordField && (
-        <TouchableOpacity
-          onPress={() => setShowPassword(!showPassword)}
-          style={{ marginLeft: 8 }}
-        >
+        <Pressable onPress={() => setShowPassword(!showPassword)}>
           <AntDesign
-            name={showPassword ? "eye" : "eyeo"}
+            name={showPassword ? "eye-invisible" : "eye"}
             size={theme.fontSize["2xl"]}
             color={theme.colors.secondaryColor}
           />
-        </TouchableOpacity>
+        </Pressable>
       )}
 
       {icon && icon}

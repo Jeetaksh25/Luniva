@@ -8,8 +8,6 @@ import {
   KeyboardAvoidingView,
   Platform,
   Keyboard,
-  Animated,
-  Easing,
   PanResponder,
   Dimensions,
   BackHandler,
@@ -30,6 +28,15 @@ import * as Haptics from "expo-haptics";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useModeColor } from "@/theme/modeColor";
 import EmptyChat from "@/comps/EmptyChat";
+
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  withTiming,
+  withRepeat,
+  Easing,
+  runOnJS,
+} from "react-native-reanimated";
 
 const { width } = Dimensions.get("window");
 const SWIPE_THRESHOLD = 50;
@@ -59,7 +66,8 @@ const Chat = () => {
   const [isTodayChat, setIsTodayChat] = useState(true);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
-  const fadeAnim = useRef(new Animated.Value(1)).current;
+  const float = useSharedValue(0);
+  const fade = useSharedValue(1);
   const flatListRef = useRef<FlatList>(null);
   const typingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastAiIdRef = useRef<string | null>(null);
@@ -70,7 +78,18 @@ const Chat = () => {
     messageInputRef.current?.focus();
   }, []);
 
-  const floatAnim = useRef(new Animated.Value(0)).current;
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: float.value }],
+    opacity: fade.value,
+  }));
+
+  useEffect(() => {
+    float.value = withRepeat(
+      withTiming(-10, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
+      -1,
+      true
+    );
+  }, []);
 
   // ---------------- Date Change Hook (Always called) ----------------
   useDateChange(handleDateChange);
@@ -126,25 +145,6 @@ const Chat = () => {
     })
   ).current;
 
-  useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(floatAnim, {
-          toValue: -10,
-          duration: 1000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(floatAnim, {
-          toValue: 0,
-          duration: 1000,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ])
-    ).start();
-  }, []);
-
   // ---------------- Effects (Always called in same order) ----------------
   // User redirect effect
   useEffect(() => {
@@ -186,23 +186,19 @@ const Chat = () => {
         .match(/^(\p{Emoji}|\p{Extended_Pictographic})/u);
       const emoji = match ? match[0] : "🙂";
 
-      fadeAnim.stopAnimation();
-      Animated.timing(fadeAnim, {
-        toValue: 0,
-        duration: 150,
-        easing: Easing.out(Easing.ease),
-        useNativeDriver: true,
-      }).start(() => {
-        setCurrentEmoji(emoji);
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 150,
-          easing: Easing.in(Easing.ease),
-          useNativeDriver: true,
-        }).start();
-      });
+      fade.value = withTiming(
+        0,
+        { duration: 150, easing: Easing.out(Easing.ease) },
+        () => {
+          runOnJS(setCurrentEmoji)(emoji);
+          fade.value = withTiming(1, {
+            duration: 150,
+            easing: Easing.in(Easing.ease),
+          });
+        }
+      );
     }
-  }, [messages, isAiTyping, fadeAnim, lastAIText]);
+  }, [messages, isAiTyping]);
 
   // Back button effect
   useEffect(() => {
@@ -363,12 +359,7 @@ const Chat = () => {
           />
 
           {messages.length > 0 && (
-            <Animated.View
-              style={[
-                styles.emojiContainer,
-                { opacity: fadeAnim, transform: [{ translateY: floatAnim }] },
-              ]}
-            >
+            <Animated.View style={[styles.emojiContainer, animatedStyle]}>
               <Text
                 style={styles.emoji}
                 onPress={() => {
