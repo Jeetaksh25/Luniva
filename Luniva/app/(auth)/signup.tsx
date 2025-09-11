@@ -55,7 +55,11 @@ export default function SignUp() {
 
   const handleSignUP = async () => {
     try {
-      await signup(email, password, username, { gender, dob });
+      const extraData: { gender?: string; dob?: string } = {};
+      if (gender?.trim()) extraData.gender = gender.trim();
+      if (dob?.trim()) extraData.dob = dob.trim();
+
+      await signup(email, password, username, extraData);
     } catch (error) {
       console.log("Signup error:", error);
     }

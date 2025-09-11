@@ -74,8 +74,8 @@ export const useStore = create((set, get) => ({
               unsubscribeUser,
               currentDate: getTodayDateString(), // Use the corrected function
             });
-            get().updateUserStats();
-            get().createTodayChat();
+            await get().updateUserStats();
+            await get().createTodayChat();
           } catch (error) {
             console.error("Error ensuring user doc:", error);
             set({ user: null, loadingAuth: false });
@@ -228,11 +228,14 @@ export const useStore = create((set, get) => ({
 
       console.log("AI Response:", aiText);
 
+
       // Reload chats for today
-      get().loadDailyChats(new Date().getMonth(), new Date().getFullYear());
+      await get().loadDailyChats(new Date().getMonth(), new Date().getFullYear());
 
       // Save AI message
       await sendAIResponse(aiText);
+
+      await get().updateUserStats();
     } catch (err) {
       console.error("AI Error:", err);
       await sendAIMessage(
