@@ -117,7 +117,7 @@ const styles = StyleSheet.create({
   container: {
     width: "95%",
     height: 140,
-    marginBottom: 50,
+    marginBottom: 40,
     borderRadius: theme.borderRadius.lg,
     flexDirection: "row",
     paddingHorizontal: 10,

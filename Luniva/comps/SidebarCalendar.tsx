@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useRef,
+  useCallback,
+} from "react";
 import {
   View,
   Text,
@@ -84,7 +90,9 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
   }, [currentDate]);
 
   useEffect(() => {
-    translateX.value = withTiming(visible ? 0 : -SIDEBAR_WIDTH, { duration: 300 });
+    translateX.value = withTiming(visible ? 0 : -SIDEBAR_WIDTH, {
+      duration: 300,
+    });
   }, [visible]);
 
   const animatedStyle = useAnimatedStyle(() => ({
@@ -94,9 +102,13 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dx) > 5,
+      onMoveShouldSetPanResponder: (_, gestureState) =>
+        Math.abs(gestureState.dx) > 5,
       onPanResponderMove: (_, gestureState) => {
-        translateX.value = Math.min(0, Math.max(-SIDEBAR_WIDTH, gestureState.dx - SIDEBAR_WIDTH));
+        translateX.value = Math.min(
+          0,
+          Math.max(-SIDEBAR_WIDTH, gestureState.dx - SIDEBAR_WIDTH)
+        );
       },
       onPanResponderRelease: (_, gestureState) => {
         if (gestureState.dx > SWIPE_THRESHOLD) closeSidebar();
@@ -114,8 +126,6 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
       if (isMounted.current) runOnJS(onClose)();
     });
   }, [onClose]);
-
-
 
   const calculateFirstChatDate = () => {
     const doneChats = chats.filter((chat: any) => chat.status === "done");
@@ -326,25 +336,29 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                 </Pressable>
               </View>
 
-              <FlatList
-                data={days}
-                renderItem={renderDay}
-                keyExtractor={(item, idx) => item?.date ?? `day-${idx}`}
-                numColumns={7}
-                contentContainerStyle={[
-                  styles.grid,
-                  {
-                    backgroundColor: darkenColor(themeColors.background, 20),
-                    padding: 10,
-                    borderRadius: 10,
-                  },
-                ]}
-              />
+              <View style={{ flex: 1, marginBottom: 10 }}>
+                <FlatList
+                  data={days}
+                  renderItem={renderDay}
+                  keyExtractor={(item, idx) => item?.date ?? `day-${idx}`}
+                  numColumns={7}
+                  contentContainerStyle={[
+                    styles.grid,
+                    {
+                      backgroundColor: darkenColor(themeColors.background, 20),
+                      padding: 10,
+                      borderRadius: 10,
+                    },
+                  ]}
+                />
+              </View>
 
-              <ProgressButton
-                onPress={openProgress}
-                progress={getStreakPercentage(user?.dailyStreak || 0)}
-              />
+              <View style={{paddingTop: 10 }}>
+                <ProgressButton
+                  onPress={openProgress}
+                  progress={getStreakPercentage(user?.dailyStreak || 0)}
+                />
+              </View>
 
               <ProfileButton user={user} onPress={openProfile} />
             </Animated.View>
