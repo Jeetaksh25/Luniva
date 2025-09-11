@@ -4,8 +4,11 @@ export const getChatTrend = (chats: any[], todayStr: string) => {
   const offsets = [-6, -5, -4, -3, -2, -1, 0];
 
   return offsets.map((offset) => {
-    const baseDate = new Date(todayStr);
+    // Parse todayStr as local date
+    const [year, month, day] = todayStr.split("-").map(Number);
+    const baseDate = new Date(year, month - 1, day);
     baseDate.setDate(baseDate.getDate() + offset);
+
     const dateStr = toDateStringLocal(baseDate);
 
     const chat = chats.find((c) => c.date === dateStr);
