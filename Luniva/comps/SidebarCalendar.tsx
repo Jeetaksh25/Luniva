@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import {
   View,
   Text,
@@ -53,6 +53,8 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
   const [streak, setStreak] = useState(0);
   const [firstChatDate, setFirstChatDate] = useState<Date | null>(null);
 
+  const isMounted = useRef(true);
+
   const chats = useStore((s) => s.chats);
   const loadDailyChats = useStore((s) => s.loadDailyChats);
   const openDailyChat = useStore((s) => s.openDailyChat);
@@ -65,6 +67,13 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
   useEffect(() => {
     setStreak(user?.dailyStreak || 0);
   }, [user]);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     const today = new Date();
@@ -116,11 +125,12 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
     onPanResponderTerminationRequest: () => false,
   });
 
-  const closeSidebar = () => {
+  const closeSidebar = useCallback(() => {
     translateX.value = withTiming(-SIDEBAR_WIDTH, { duration: 300 }, () => {
-      runOnJS(onClose)();
+      if (isMounted.current) runOnJS(onClose)();
     });
-  };
+  }, [onClose]);
+
 
   const calculateFirstChatDate = () => {
     const doneChats = chats.filter((chat: any) => chat.status === "done");
@@ -163,6 +173,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
   };
 
   const renderDay = ({ item }: { item: any }) => {
+    if (!item?.date) return null;
     const todayStr = getTodayDateString();
     const isTodayItem = item.date === todayStr;
     const itemDate = new Date(item.date);
@@ -193,7 +204,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
     const handleDayPress = () => {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       if (hasMessages) {
-        openDailyChat(item.date);
+        openDailyChat?.(item.date);
         closeSidebar();
       }
     };
@@ -333,7 +344,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
               <FlatList
                 data={days}
                 renderItem={renderDay}
-                keyExtractor={(item) => item.date}
+                keyExtractor={(item, idx) => item?.date ?? `day-${idx}`}
                 numColumns={7}
                 contentContainerStyle={[
                   styles.grid,
@@ -347,7 +358,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
 
               <ProgressButton
                 onPress={openProgress}
-                progress={getStreakPercentage(user.dailyStreak)}
+                progress={getStreakPercentage(user?.dailyStreak || 0)}
               />
 
               <ProfileButton user={user} onPress={openProfile} />
