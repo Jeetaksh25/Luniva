@@ -102,7 +102,8 @@ export const useStore = create((set, get) => ({
       if (extraData && typeof extraData === "object") {
         if (Object.prototype.hasOwnProperty.call(extraData, "gender")) {
           const g =
-            typeof extraData.gender === "string" && extraData.gender.trim().length
+            typeof extraData.gender === "string" &&
+            extraData.gender.trim().length
               ? extraData.gender.trim()
               : null;
           sanitizedExtra.gender = g;
@@ -133,7 +134,7 @@ export const useStore = create((set, get) => ({
 
       // Set store user immediately — merge auth user and doc
       set({
-        user: { ...(cred.user ), ...(freshUserDoc || {}) },
+        user: { ...cred.user, ...(freshUserDoc || {}) },
         loading: false,
       });
 
@@ -414,13 +415,13 @@ export const useStore = create((set, get) => ({
   },
   // In your useStore
   createTodayChat: async () => {
-    const { user } = get();
+    const { user, chats, loadingChat } = get();
     if (!user) {
       console.error("No user found when creating today's chat");
       return null;
     }
 
-    if (get().loadingChat) return;
+    if (loadingChat) return null;
 
     set({ loadingChat: true });
 
@@ -429,24 +430,24 @@ export const useStore = create((set, get) => ({
 
     try {
       const newChatId = await getOrCreateDailyChat(user.uid, todayStr);
-
-      const { chats } = get();
-      const existingChatIndex = chats.findIndex((c) => c.date === todayStr);
-
-      let updatedChats;
-      if (existingChatIndex >= 0) {
-        updatedChats = [...chats];
-        updatedChats[existingChatIndex] = {
-          date: todayStr,
-          chatId: newChatId,
-          status: "pending", // Start as pending, will update when messages are sent
-        };
-      } else {
-        updatedChats = [
-          ...chats,
-          { date: todayStr, chatId: newChatId, status: "pending" },
-        ];
+      if (!newChatId) {
+        console.error("Failed to get or create today's chat");
+        return null;
       }
+
+      // Update or add chat
+      const existingChatIndex = chats.findIndex((c) => c.date === todayStr);
+      const updatedChats =
+        existingChatIndex >= 0
+          ? [
+              ...chats.slice(0, existingChatIndex),
+              { date: todayStr, chatId: newChatId, status: "pending" },
+              ...chats.slice(existingChatIndex + 1),
+            ]
+          : [
+              ...chats,
+              { date: todayStr, chatId: newChatId, status: "pending" },
+            ];
 
       set({
         chats: updatedChats,
@@ -458,7 +459,7 @@ export const useStore = create((set, get) => ({
       return newChatId;
     } catch (error) {
       console.error("❌ Error creating today's chat:", error);
-      throw error;
+      return null;
     } finally {
       set({ loadingChat: false });
     }
@@ -624,9 +625,10 @@ export const useStore = create((set, get) => ({
 
       // Sort chat dates ascending
       const sortedDates = Object.keys(allChats).sort(
-        (a, b) => new Date(a).getTime() - new Date(b).getTime()
+        (a, b) =>
+          new Date(a + "T00:00:00").getTime() -
+          new Date(b + "T00:00:00").getTime()
       );
-
       let prevDate = null;
 
       for (const dateStr of sortedDates) {

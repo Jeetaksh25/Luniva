@@ -1,15 +1,12 @@
+import { toDateStringLocal } from "./dateUtils";
+
 export const getChatTrend = (chats: any[], todayStr: string) => {
   const offsets = [-6, -5, -4, -3, -2, -1, 0];
 
   return offsets.map((offset) => {
-    const [year, month, day] = todayStr.split("-").map(Number);
-    const date = new Date(year, month - 1, day);
-    date.setDate(date.getDate() + offset);
-    const dateStr = [
-      date.getFullYear(),
-      String(date.getMonth() + 1).padStart(2, "0"),
-      String(date.getDate()).padStart(2, "0"),
-    ].join("-");
+    const baseDate = new Date(todayStr);
+    baseDate.setDate(baseDate.getDate() + offset);
+    const dateStr = toDateStringLocal(baseDate);
 
     const chat = chats.find((c) => c.date === dateStr);
 
@@ -27,7 +24,6 @@ export const renderZigZag = (trend: number[], width: number) => {
   });
   return path;
 };
-
 
 export const renderZigZag2 = (trend: number[], width: number) => {
   const step = width / (trend.length - 1);

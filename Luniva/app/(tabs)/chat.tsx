@@ -183,9 +183,8 @@ const Chat = () => {
       lastAiIdRef.current = latestAI.id;
       setLastAIText(latestAI.text);
 
-      const match = latestAI.text
-        .trim()
-        .match(/^(\p{Emoji}|\p{Extended_Pictographic})/u);
+      const text = latestAI?.text ?? "";
+      const match = text.trim().match(/^(\p{Emoji}|\p{Extended_Pictographic})/u);
       const emoji = match ? match[0] : "🙂";
 
       fade.value = withTiming(
@@ -353,9 +352,7 @@ const Chat = () => {
             <TouchableOpacity onPress={handleProfilePress} activeOpacity={0.7}>
               {user?.photoBase64 ? (
                 <Image
-                  source={{
-                    uri: `data:image/jpeg;base64,${user?.photoBase64}`,
-                  }}
+                  source={{ uri: `data:image/jpeg;base64,${user.photoBase64}` }}
                   style={styles.avatar}
                 />
               ) : (
@@ -408,7 +405,7 @@ const Chat = () => {
               <FlatList
                 ref={flatListRef}
                 data={messages}
-                keyExtractor={(item) => item.id}
+                keyExtractor={(item, idx) => item?.id ?? `msg-${idx}`}
                 renderItem={({ item }) => (
                   <ChatBubble
                     text={
