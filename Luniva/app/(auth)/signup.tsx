@@ -33,6 +33,9 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import { darkenColor } from "@/functions/darkenColor";
 import { useModeColor } from "@/theme/modeColor";
+import { ToastAndroid } from "react-native";
+
+
 
 export default function SignUp() {
   const themeColors = useModeColor();
@@ -59,9 +62,20 @@ export default function SignUp() {
       if (gender?.trim()) extraData.gender = gender.trim();
       if (dob?.trim()) extraData.dob = dob.trim();
 
-      await signup(email, password, username, extraData);
-    } catch (error) {
+      await signup(email.trim(), password.trim(), username.trim(), extraData);
+
+      // Success feedback
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      ToastAndroid.show("Signup successful 🎉", ToastAndroid.SHORT);
+    } catch (error: any) {
       console.log("Signup error:", error);
+
+      // Error feedback
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      ToastAndroid.show(
+        error?.message || "Signup failed ❌",
+        ToastAndroid.LONG
+      );
     }
   };
 

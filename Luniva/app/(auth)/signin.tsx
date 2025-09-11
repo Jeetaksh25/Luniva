@@ -19,6 +19,7 @@ import { useState, useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { darkenColor } from "@/functions/darkenColor";
 import { useModeColor } from "@/theme/modeColor";
+import { ToastAndroid } from "react-native";
 
 export default function SignIn() {
   const themeColors = useModeColor();
@@ -37,9 +38,12 @@ export default function SignIn() {
 
   const handleLogin = async () => {
     try {
-      await login(email, password);
-    } catch (error) {
-      console.log("Login error:", error);
+      await login(email.trim(), password.trim());
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      ToastAndroid.show("Login successful!", ToastAndroid.SHORT);
+    } catch (error: any) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      ToastAndroid.show(error?.message || "Login failed", ToastAndroid.LONG);
     }
   };
 
