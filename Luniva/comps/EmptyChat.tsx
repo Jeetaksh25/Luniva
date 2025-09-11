@@ -27,13 +27,13 @@ const EmptyChat: React.FC<EmptyChatProps> = ({ onStartChat }) => {
   }));
 
   useEffect(() => {
-    // Looping floating animation
+    // Looping floating animation safely
     float.value = withRepeat(
       withTiming(-10, { duration: 1000, easing: Easing.inOut(Easing.ease) }),
       -1,
-      true // reverse each time
+      true
     );
-  }, []);
+  }, [float]);
 
   const currentEmoji = "😀";
 

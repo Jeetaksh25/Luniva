@@ -50,30 +50,49 @@ export const useStore = create((set, get) => ({
 
   initAuth: () => {
     return new Promise((resolve) => {
-      onAuthStateChanged(auth, async (user) => {
-        if (user) {
+      onAuthStateChanged(auth, async (authUser) => {
+        if (authUser) {
           try {
-            await ensureUserDoc(user);
-
-            const userRef = doc(db, "users", user.uid);
-            const unsubscribeUser = onSnapshot(userRef, (doc) => {
-              if (doc.exists()) {
-                const userData = doc.data();
-                console.log(
-                  "🔥 User data updated - streak:",
-                  userData.dailyStreak
-                );
-                set({ user: { ...user, ...userData } });
-                get().updateUserStats(); // Update stats when user data changes
+            await ensureUserDoc(authUser);
+            const userRef = doc(db, "users", authUser.uid);
+  
+            // Listen to Firestore user doc changes
+            const unsubscribeUser = onSnapshot(userRef, (docSnap) => {
+              if (docSnap.exists()) {
+                const userData = docSnap.data();
+  
+                // Merge auth user info and Firestore fields
+                const mergedUser = {
+                  uid: authUser.uid,
+                  email: authUser.email,
+                  displayName: authUser.displayName,
+                  photoURL: authUser.photoURL,
+                  ...userData,
+                };
+  
+                set({ user: mergedUser });
+                get().updateUserStats(); // Recalculate stats
               }
             });
-
+  
+            // Fetch Firestore user data once initially to avoid empty fields
+            const initialDoc = await getDoc(userRef);
+            const initialData = initialDoc.exists() ? initialDoc.data() : {};
+            const mergedInitialUser = {
+              uid: authUser.uid,
+              email: authUser.email,
+              displayName: authUser.displayName,
+              photoURL: authUser.photoURL,
+              ...initialData,
+            };
+  
             set({
-              user,
+              user: mergedInitialUser,
               loadingAuth: false,
               unsubscribeUser,
-              currentDate: getTodayDateString(), // Use the corrected function
+              currentDate: getTodayDateString(),
             });
+  
             await get().updateUserStats();
             await get().createTodayChat();
           } catch (error) {
@@ -87,6 +106,7 @@ export const useStore = create((set, get) => ({
       });
     });
   },
+  
 
   signup: async (email, password, displayName, extraData = {}) => {
     set({ loading: true, error: null });
@@ -474,11 +494,16 @@ export const useStore = create((set, get) => ({
   getUserData: async () => {
     const { user } = get();
     if (!user) return null;
-
+  
     try {
       const userRef = doc(db, "users", user.uid);
       const userSnap = await getDoc(userRef);
-      return userSnap.exists() ? userSnap.data() : null;
+      if (!userSnap.exists()) return null;
+  
+      return {
+        ...user,
+        ...userSnap.data(),
+      };
     } catch (error) {
       console.error("Error getting user data:", error);
       return null;

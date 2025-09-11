@@ -2,7 +2,7 @@ import { useState, FC, forwardRef, useImperativeHandle, useRef } from "react";
 import {
   View,
   TextInput,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   useColorScheme,
   KeyboardAvoidingView,
@@ -75,7 +75,7 @@ const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(
         onPress={() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light)}
       />
 
-      <TouchableOpacity
+      <Pressable
         style={[
           styles.sendButton,
           { backgroundColor: theme.colors.primaryColor },
@@ -89,7 +89,7 @@ const MessageInput = forwardRef<MessageInputRef, MessageInputProps>(
         }}
       >
         <Ionicons name="send" size={24} color="#fff" />
-      </TouchableOpacity>
+      </Pressable>
     </View>
   );
 });

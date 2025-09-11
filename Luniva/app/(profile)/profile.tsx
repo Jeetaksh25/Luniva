@@ -4,7 +4,7 @@ import {
   Text,
   StyleSheet,
   Image,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
   ScrollView,
 } from "react-native";
@@ -83,7 +83,7 @@ const UserProfile = () => {
         showsVerticalScrollIndicator={false}
       >
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleImagePick}>
+          <Pressable onPress={handleImagePick}>
             <View>
               {uploading ? (
                 <ActivityIndicator
@@ -111,7 +111,7 @@ const UserProfile = () => {
                 <AntDesign name="edit" size={20} color="#fff" />
               </View>
             </View>
-          </TouchableOpacity>
+          </Pressable>
         </View>
 
         {/* Change button */}

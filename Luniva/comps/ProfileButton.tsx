@@ -1,4 +1,4 @@
-import { Image, Text, View, TouchableOpacity, StyleSheet } from "react-native";
+import { Image, Text, View, Pressable, StyleSheet } from "react-native";
 import { router } from "expo-router";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useModeColor } from "../theme/modeColor";
@@ -15,7 +15,7 @@ const ProfileButton: FC<ProfileButtonProps> = ({ user, onPress }) => {
   console.log("User photo data:", user.photoBase64 ? "Exists" : "Null");
   const themeColors = useModeColor();
   return (
-    <TouchableOpacity onPress={onPress}>
+    <Pressable onPress={onPress}>
       <View
         style={[
           styles.userContainer,
@@ -42,7 +42,7 @@ const ProfileButton: FC<ProfileButtonProps> = ({ user, onPress }) => {
           {user.displayName}
         </Text>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 

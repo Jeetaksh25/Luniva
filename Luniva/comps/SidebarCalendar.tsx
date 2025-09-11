@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useRef, useCallback } from "react"
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   Dimensions,
   FlatList,
@@ -84,52 +84,37 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
   }, [currentDate]);
 
   useEffect(() => {
-    if (visible) {
-      translateX.value = withTiming(0, { duration: 300 });
-    } else {
-      translateX.value = withTiming(-SIDEBAR_WIDTH, { duration: 300 });
-    }
+    translateX.value = withTiming(visible ? 0 : -SIDEBAR_WIDTH, { duration: 300 });
   }, [visible]);
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
   }));
 
-  const panResponder = PanResponder.create({
-    onStartShouldSetPanResponder: () => true,
-    onMoveShouldSetPanResponder: (_, gestureState) =>
-      Math.abs(gestureState.dx) > 5,
-
-    onPanResponderMove: (_, gestureState) => {
-      // Drag only to the right
-      if (gestureState.dx > 0) {
-        translateX.value = Math.min(0, -SIDEBAR_WIDTH + gestureState.dx);
-      }
-    },
-
-    onPanResponderRelease: (_, gestureState) => {
-      if (gestureState.dx > SWIPE_THRESHOLD) {
-        // Close sidebar if dragged past threshold
-        closeSidebar();
-      } else {
-        // Snap back to open
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: (_, gestureState) => Math.abs(gestureState.dx) > 5,
+      onPanResponderMove: (_, gestureState) => {
+        translateX.value = Math.min(0, Math.max(-SIDEBAR_WIDTH, gestureState.dx - SIDEBAR_WIDTH));
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        if (gestureState.dx > SWIPE_THRESHOLD) closeSidebar();
+        else translateX.value = withTiming(0, { duration: 200 });
+      },
+      onPanResponderTerminate: () => {
         translateX.value = withTiming(0, { duration: 200 });
-      }
-    },
-
-    onPanResponderTerminate: () => {
-      // Snap back if gesture interrupted
-      translateX.value = withTiming(0, { duration: 200 });
-    },
-
-    onPanResponderTerminationRequest: () => false,
-  });
+      },
+      onPanResponderTerminationRequest: () => false,
+    })
+  ).current;
 
   const closeSidebar = useCallback(() => {
     translateX.value = withTiming(-SIDEBAR_WIDTH, { duration: 300 }, () => {
       if (isMounted.current) runOnJS(onClose)();
     });
   }, [onClose]);
+
 
 
   const calculateFirstChatDate = () => {
@@ -210,7 +195,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
     };
 
     return (
-      <TouchableOpacity
+      <Pressable
         style={[
           styles.dayBox,
           {
@@ -237,7 +222,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
             Today
           </Text>
         )}
-      </TouchableOpacity>
+      </Pressable>
     );
   };
 
@@ -304,7 +289,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
               </View>
 
               <View style={styles.header}>
-                <TouchableOpacity
+                <Pressable
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                     setMonth((m) =>
@@ -317,7 +302,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                     size={24}
                     color={themeColors.text}
                   />
-                </TouchableOpacity>
+                </Pressable>
                 <Text style={[styles.headerText, { color: themeColors.text }]}>
                   {new Date(year, month).toLocaleString("default", {
                     month: "long",
@@ -325,7 +310,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                   &nbsp;
                   {year}
                 </Text>
-                <TouchableOpacity
+                <Pressable
                   onPress={() => {
                     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                     setMonth((m) =>
@@ -338,7 +323,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
                     size={24}
                     color={themeColors.text}
                   />
-                </TouchableOpacity>
+                </Pressable>
               </View>
 
               <FlatList

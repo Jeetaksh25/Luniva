@@ -2,7 +2,7 @@ import React from "react";
 import {
   View,
   Text,
-  TouchableOpacity,
+  Pressable,
   StyleSheet,
   Dimensions,
 } from "react-native";
@@ -31,7 +31,7 @@ const ProgressButton: React.FC<ProgressButtonProps> = ({
   const path = renderZigZag(trend, leftWidth);
 
   return (
-    <TouchableOpacity onPress={onPress}>
+    <Pressable onPress={onPress}>
       <LinearGradient
         colors={["#FF6F61", "#6A4C93"]}
         start={{ x: 0, y: 0 }}
@@ -107,7 +107,7 @@ const ProgressButton: React.FC<ProgressButtonProps> = ({
           View Your Journey
         </Text>
       </LinearGradient>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 

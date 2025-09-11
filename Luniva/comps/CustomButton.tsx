@@ -7,6 +7,7 @@ import {
   StyleProp,
   TextStyle,
   ViewStyle,
+  Pressable,
 } from "react-native";
 import React, { FC } from "react";
 import colors from "tailwindcss/colors";
@@ -54,6 +55,7 @@ const CustomButton: FC<CutomButtonProps> = ({
         },
         containerStyles,
       ]}
+      activeOpacity={0.6}
       disabled={isLoading}
     >
       {isLoading ? (

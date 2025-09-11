@@ -5,7 +5,7 @@ import {
   View,
   StyleSheet,
   Image,
-  TouchableOpacity,
+  Pressable,
   ActivityIndicator,
   Text,
   Platform,
@@ -118,7 +118,7 @@ const EditProfile = () => {
     >
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleImagePick}>
+          <Pressable onPress={handleImagePick}>
             {uploading ? (
               <ActivityIndicator
                 size="large"
@@ -143,7 +143,7 @@ const EditProfile = () => {
             <View style={styles.pencilIcon}>
               <AntDesign name="edit" size={20} color="#fff" />
             </View>
-          </TouchableOpacity>
+          </Pressable>
           <Text
             style={{
               color: themeColors.text,

@@ -53,6 +53,7 @@ export default function FirstScreen() {
   const animateEmojiChange = (onChangeEmoji: () => void) => {
     fade.value = withTiming(0, { duration: 300, easing: Easing.out(Easing.ease) }, () => {
       runOnJS(onChangeEmoji)();
+      // Animate back to 1 safely
       fade.value = withTiming(1, { duration: 300, easing: Easing.in(Easing.ease) });
     });
   };

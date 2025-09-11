@@ -1,4 +1,4 @@
-import { Text, View, StyleSheet, TouchableOpacity } from "react-native";
+import { Text, View, StyleSheet, Pressable } from "react-native";
 import React, { FC } from "react";
 import { useModeColor } from "@/theme/modeColor";
 import { theme } from "../theme/theme";
@@ -13,7 +13,7 @@ interface StatsBubbleProps {
 const StatsBubble: FC<StatsBubbleProps> = ({ label, value }) => {
   const themeColors = useModeColor();
   return (
-    <TouchableOpacity onPress={()=> {
+    <Pressable onPress={()=> {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     }}
     >
@@ -26,7 +26,7 @@ const StatsBubble: FC<StatsBubbleProps> = ({ label, value }) => {
         <Text style={styles.value}>{value}</Text>
         <Text style={[styles.label, { color: themeColors.text }]}>{label}</Text>
       </View>
-    </TouchableOpacity>
+    </Pressable>
   );
 };
 

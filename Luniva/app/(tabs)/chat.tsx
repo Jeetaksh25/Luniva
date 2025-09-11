@@ -70,6 +70,7 @@ const Chat = () => {
 
   const float = useSharedValue(0);
   const fade = useSharedValue(1);
+
   const flatListRef = useRef<FlatList>(null);
   const typingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastAiIdRef = useRef<string | null>(null);
@@ -79,6 +80,7 @@ const Chat = () => {
   const focusMessageInput = useCallback(() => {
     messageInputRef.current?.focus();
   }, []);
+
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: float.value }],
@@ -184,7 +186,7 @@ const Chat = () => {
       setLastAIText(latestAI.text);
 
       const text = latestAI?.text ?? "";
-      const match = text.trim().match(/^(\p{Emoji}|\p{Extended_Pictographic})/u);
+      const match = text.trim().match(/^(\p{Extended_Pictographic}|\p{Emoji})/u);
       const emoji = match ? match[0] : "🙂";
 
       fade.value = withTiming(
@@ -199,7 +201,7 @@ const Chat = () => {
         }
       );
     }
-  }, [messages, isAiTyping]);
+  }, [messages]);
 
   // Back button effect
   useEffect(() => {
