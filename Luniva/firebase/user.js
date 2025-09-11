@@ -14,21 +14,27 @@ export async function ensureUserDoc(user, extraData = {}) {
     const ref = doc(db, "users", user.uid);
     const snap = await getDoc(ref);
 
-    // Helper to detect if caller explicitly provided a field
-    const callerProvided = (key) => Object.prototype.hasOwnProperty.call(extraData, key);
+    const callerProvided = (key) =>
+      Object.prototype.hasOwnProperty.call(extraData, key);
 
-    // Prepare sanitized values (but don't force them into updates unless caller provided)
+    // Prepare sanitized values
     const sanitized = {
       username:
-        callerProvided("username") && typeof extraData.username === "string" && extraData.username.trim().length
+        callerProvided("username") &&
+        typeof extraData.username === "string" &&
+        extraData.username.trim().length
           ? extraData.username.trim()
           : (user.displayName?.toLowerCase()?.replace(/\s+/g, "") ?? ""),
       gender:
-        callerProvided("gender") && typeof extraData.gender === "string" && extraData.gender.trim().length
+        callerProvided("gender") &&
+        typeof extraData.gender === "string" &&
+        extraData.gender.trim().length
           ? extraData.gender.trim()
           : null,
       dob:
-        callerProvided("dob") && typeof extraData.dob === "string" && extraData.dob.trim().length
+        callerProvided("dob") &&
+        typeof extraData.dob === "string" &&
+        extraData.dob.trim().length
           ? extraData.dob.trim()
           : null,
     };
@@ -45,17 +51,16 @@ export async function ensureUserDoc(user, extraData = {}) {
       highestStreak: 0,
       totalDaysChatted: 0,
       totalMessages: 0,
-      // on initial creation we want explicit gender/dob (may be null)
-      gender: sanitized.gender,
-      dob: sanitized.dob,
+      gender: callerProvided("gender") ? sanitized.gender : null, // ✅ keep if provided
+      dob: callerProvided("dob") ? sanitized.dob : null,         // ✅ keep if provided
     };
 
     if (!snap.exists()) {
-      // First time creation - write full base doc
+      // First time creation
       await setDoc(ref, base);
       console.log("✅ User document created");
     } else {
-      // Update branch: only update fields the caller explicitly provided (to avoid overwriting with null/empty)
+      // Update branch
       const updates = {
         lastLogin: serverTimestamp(),
       };
@@ -63,28 +68,24 @@ export async function ensureUserDoc(user, extraData = {}) {
       if (callerProvided("username")) {
         updates.username = sanitized.username;
       }
-
-      // Only add gender/dob to updates if caller provided them.
-      // This prevents initAuth() -> ensureUserDoc(user) calls (with no extraData)
-      // from wiping values or overwriting with null/empty strings.
       if (callerProvided("gender")) {
-        // sanitized.gender may be null (explicitly provided but empty) — if you want to ignore explicit empty,
-        // change logic; currently this will set to null if user explicitly passed an empty value.
         updates.gender = sanitized.gender;
       }
-
       if (callerProvided("dob")) {
         updates.dob = sanitized.dob;
       }
 
-      await updateDoc(ref, updates);
-      console.log("✅ User document updated with provided extraData");
+      if (Object.keys(updates).length > 1) {
+        await updateDoc(ref, updates);
+        console.log("✅ User document updated with provided extraData");
+      }
     }
   } catch (error) {
     console.error("❌ Error in ensureUserDoc:", error);
     throw error;
   }
 }
+
 
 // Update streak after a chat, with optional missed-day check
 export async function updateUserStreak(uid, chatDate, dailyChats = null) {
