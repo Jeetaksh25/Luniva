@@ -245,7 +245,7 @@ const SidebarCalendar: React.FC<SidebarCalendarProps> = ({
             <Animated.View
               style={[
                 styles.sidebar,
-                { transform: [{ translateX }] },
+                animatedStyle,
                 { backgroundColor: darkenColor(themeColors.background, 10) },
               ]}
               {...panResponder.panHandlers}

@@ -97,12 +97,13 @@ export const useStore = create((set, get) => ({
         await updateProfile(cred.user, { displayName: displayName.trim() });
       }
 
-      // SANITIZE extraData: trim strings and convert empty -> null
+      // SANITIZE extraData
       const sanitizedExtra = {};
       if (extraData && typeof extraData === "object") {
         if (Object.prototype.hasOwnProperty.call(extraData, "gender")) {
           const g =
-            typeof extraData.gender === "string" && extraData.gender.trim().length
+            typeof extraData.gender === "string" &&
+            extraData.gender.trim().length
               ? extraData.gender.trim()
               : null;
           sanitizedExtra.gender = g;
@@ -117,15 +118,21 @@ export const useStore = create((set, get) => ({
       }
 
       // Provide username as well (sanitized)
-      const username = displayName && displayName.trim() ? displayName.trim() : cred.user.uid;
-      const ensurePayload = { username, ...sanitizedExtra };
+      const username =
+        displayName && displayName.trim() ? displayName.trim() : cred.user.uid;
+      const ensurePayload = {
+        username,
+        ...sanitizedExtra,
+        lastLogin: new Date().toISOString(),
+      };
 
       // Ensure user doc with sanitized payload
       await ensureUserDoc(cred.user, ensurePayload);
 
-      // set user in store (auth object). The onAuthStateChanged listener will later
-      // attach firestore user fields via snapshot, but set this immediately so UI can proceed.
-      set({ user: cred.user, loading: false });
+      // 👇 Let initAuth handle user state + today’s chat setup
+      await get().initAuth();
+
+      set({ loading: false });
     } catch (error) {
       console.error("Signup error:", error);
       set({ error, loading: false });
@@ -137,7 +144,7 @@ export const useStore = create((set, get) => ({
     try {
       const cred = await signInWithEmailAndPassword(auth, email, password);
       await ensureUserDoc(cred.user);
-      set({ user: cred.user });
+      await get().initAuth();
     } finally {
       set({ loading: false });
     }
@@ -228,9 +235,11 @@ export const useStore = create((set, get) => ({
 
       console.log("AI Response:", aiText);
 
-
       // Reload chats for today
-      await get().loadDailyChats(new Date().getMonth(), new Date().getFullYear());
+      await get().loadDailyChats(
+        new Date().getMonth(),
+        new Date().getFullYear()
+      );
 
       // Save AI message
       await sendAIResponse(aiText);
@@ -392,14 +401,15 @@ export const useStore = create((set, get) => ({
   },
   // In your useStore
   createTodayChat: async () => {
-    if (get().loadingChat) return;
-
-    set({ loadingChat: true });
     const { user } = get();
     if (!user) {
       console.error("No user found when creating today's chat");
-      return;
+      return null;
     }
+
+    if (get().loadingChat) return;
+
+    set({ loadingChat: true });
 
     const todayStr = getTodayDateString();
     console.log("🔄 Creating/ensuring chat for today:", todayStr);
@@ -664,18 +674,20 @@ export const useStore = create((set, get) => ({
       const avgMessagesPerChat =
         totalDaysChatted > 0 ? Math.round(totalMessages / totalDaysChatted) : 0;
 
-        const firstChatDate = sortedDates.length
+      const firstChatDate = sortedDates.length
         ? new Date(sortedDates[0])
         : new Date();
-      
+
       const daysSinceFirst =
-        Math.floor((now.getTime() - firstChatDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      
+        Math.floor(
+          (now.getTime() - firstChatDate.getTime()) / (1000 * 60 * 60 * 24)
+        ) + 1;
+
       const consistency =
         daysSinceFirst > 0
           ? Math.round((totalDaysChatted / daysSinceFirst) * 100)
           : 0;
-          
+
       // Update user object in store
       set({
         userStats: {
