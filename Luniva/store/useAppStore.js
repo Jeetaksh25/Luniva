@@ -97,13 +97,12 @@ export const useStore = create((set, get) => ({
         await updateProfile(cred.user, { displayName: displayName.trim() });
       }
 
-      // SANITIZE extraData
+      // SANITIZE extraData (unchanged)
       const sanitizedExtra = {};
       if (extraData && typeof extraData === "object") {
         if (Object.prototype.hasOwnProperty.call(extraData, "gender")) {
           const g =
-            typeof extraData.gender === "string" &&
-            extraData.gender.trim().length
+            typeof extraData.gender === "string" && extraData.gender.trim().length
               ? extraData.gender.trim()
               : null;
           sanitizedExtra.gender = g;
@@ -117,7 +116,7 @@ export const useStore = create((set, get) => ({
         }
       }
 
-      // Provide username as well (sanitized)
+      // username + lastLogin payload
       const username =
         displayName && displayName.trim() ? displayName.trim() : cred.user.uid;
       const ensurePayload = {
@@ -126,13 +125,27 @@ export const useStore = create((set, get) => ({
         lastLogin: new Date().toISOString(),
       };
 
-      // Ensure user doc with sanitized payload
+      // Ensure user doc on Firestore with lastLogin
       await ensureUserDoc(cred.user, ensurePayload);
 
-      // 👇 Let initAuth handle user state + today’s chat setup
+      // Immediately read back the user doc so UI shows lastLogin right away
+      const freshUserDoc = await get().getUserData(); // uses getUserData in store
+
+      // Set store user immediately — merge auth user and doc
+      set({
+        user: { ...(cred.user ), ...(freshUserDoc || {}) },
+        loading: false,
+      });
+
+      // Now initialize auth watchers (onSnapshot, etc.)
+      // This will also set unsubscribe listeners and keep the store in sync
       await get().initAuth();
 
-      set({ loading: false });
+      // Ensure today's chat exists before navigating to /chat
+      await get().createTodayChat();
+
+      // Only navigate AFTER user & today's chat are ready
+      // (Do this in your signup component/flow, e.g. router.push('/chat'))
     } catch (error) {
       console.error("Signup error:", error);
       set({ error, loading: false });

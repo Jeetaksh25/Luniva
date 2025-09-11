@@ -55,6 +55,8 @@ const Chat = () => {
   const handleDateChange = useStore((s) => s.handleDateChange);
   const isAiTyping = useStore((s) => s.isAiTyping) ?? false;
   const createTodayChat = useStore((s) => s.createTodayChat);
+  const loadingAuth = useStore((s) => s.loadingAuth);
+  const loadingChat = useStore((s) => s.loadingChat);
 
   // ---------------- States & Refs (Always called in same order) ----------------
   const [keyboardVisible, setKeyboardVisible] = useState(false);
@@ -148,10 +150,10 @@ const Chat = () => {
   // ---------------- Effects (Always called in same order) ----------------
   // User redirect effect
   useEffect(() => {
-    if (!user) {
+    if (!loadingAuth && !user) {
       router.replace("/signin");
     }
-  }, [user, router]);
+  }, [user, router, loadingAuth]);
 
   // Typing indicator effect
   useEffect(() => {
@@ -221,6 +223,7 @@ const Chat = () => {
     let isMounted = true;
 
     const init = async () => {
+      if (!user) return; // wait until user exists
       if (!currentChatId) {
         setIsCreatingChat(true);
         try {
@@ -238,7 +241,7 @@ const Chat = () => {
     return () => {
       isMounted = false;
     };
-  }, [currentChatId, createTodayChat]);
+  }, [user, currentChatId, createTodayChat]);
 
   // Check today's chat effect
   useEffect(() => {
@@ -292,14 +295,23 @@ const Chat = () => {
             📖 This chat is from a previous date. You can only view messages.
           </Text>
           <TouchableOpacity
-            style={styles.todayButton}
-            onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-              createTodayChat();
-            }}
-          >
-            <Text style={{ color: "#fff" }}>Go to Today's Chat</Text>
-          </TouchableOpacity>
+  style={styles.todayButton}
+  disabled={isCreatingChat || loadingChat}
+  onPress={async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    try {
+      const newId = await createTodayChat();
+      // focus the input if it's now created
+      focusMessageInput();
+      // If needed, mark it as today's chat in local state
+      setIsTodayChat(true);
+    } catch (err) {
+      console.error("Could not create today's chat on button press:", err);
+    }
+  }}
+>
+  <Text style={{ color: "#fff" }}>Go to Today's Chat</Text>
+</TouchableOpacity>
         </View>
       );
     }
