@@ -13,13 +13,13 @@ import React, { FC } from "react";
 import colors from "tailwindcss/colors";
 import { GestureDetectorBridge } from "react-native-screens";
 import { theme } from "../theme/theme";
-
+import { RectButton } from "react-native-gesture-handler";
 import * as Haptics from "expo-haptics";
 
 interface CutomButtonProps {
   title: string;
   icon?: React.ReactNode;
-  handlePress?: (event: GestureResponderEvent) => void;
+  handlePress?: () => void;
   containerStyles?: StyleProp<ViewStyle>;
   textStyles?: StyleProp<TextStyle>;
   isLoading?: boolean;
@@ -35,14 +35,14 @@ const CustomButton: FC<CutomButtonProps> = ({
   isLoading,
   loadingText,
 }) => {
-  const handlefunction = (event: GestureResponderEvent) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+  const handlefunction = () => {
+    Haptics.selectionAsync();
     if (handlePress) {
-      handlePress(event);
+      handlePress();
     }
   };
   return (
-    <TouchableOpacity
+    <RectButton
       onPress={handlefunction}
       style={[
         {
@@ -56,7 +56,7 @@ const CustomButton: FC<CutomButtonProps> = ({
         containerStyles,
       ]}
       activeOpacity={0.6}
-      disabled={isLoading}
+      rippleColor="rgba(0,0,0,0.2)"
     >
       {isLoading ? (
         <>
@@ -92,7 +92,7 @@ const CustomButton: FC<CutomButtonProps> = ({
           </Text>
         </>
       )}
-    </TouchableOpacity>
+    </RectButton>
   );
 };
 
