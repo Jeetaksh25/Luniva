@@ -97,12 +97,34 @@ export const useStore = create((set, get) => ({
         await updateProfile(cred.user, { displayName: displayName.trim() });
       }
 
-      // Merge extra profile data into Firestore doc
-      await ensureUserDoc(cred.user, {
-        username: displayName || cred.user.uid,
-        ...extraData,
-      });
+      // SANITIZE extraData: trim strings and convert empty -> null
+      const sanitizedExtra = {};
+      if (extraData && typeof extraData === "object") {
+        if (Object.prototype.hasOwnProperty.call(extraData, "gender")) {
+          const g =
+            typeof extraData.gender === "string" && extraData.gender.trim().length
+              ? extraData.gender.trim()
+              : null;
+          sanitizedExtra.gender = g;
+        }
+        if (Object.prototype.hasOwnProperty.call(extraData, "dob")) {
+          const d =
+            typeof extraData.dob === "string" && extraData.dob.trim().length
+              ? extraData.dob.trim()
+              : null;
+          sanitizedExtra.dob = d;
+        }
+      }
 
+      // Provide username as well (sanitized)
+      const username = displayName && displayName.trim() ? displayName.trim() : cred.user.uid;
+      const ensurePayload = { username, ...sanitizedExtra };
+
+      // Ensure user doc with sanitized payload
+      await ensureUserDoc(cred.user, ensurePayload);
+
+      // set user in store (auth object). The onAuthStateChanged listener will later
+      // attach firestore user fields via snapshot, but set this immediately so UI can proceed.
       set({ user: cred.user, loading: false });
     } catch (error) {
       console.error("Signup error:", error);
