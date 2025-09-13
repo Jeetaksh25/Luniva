@@ -51,8 +51,8 @@ export async function ensureUserDoc(user, extraData = {}) {
       highestStreak: 0,
       totalDaysChatted: 0,
       totalMessages: 0,
-      gender: callerProvided("gender") ? sanitized.gender : null, // ✅ keep if provided
-      dob: callerProvided("dob") ? sanitized.dob : null,         // ✅ keep if provided
+      gender: sanitized.gender ?? null,
+      dob: sanitized.dob ?? null,  
     };
 
     if (!snap.exists()) {

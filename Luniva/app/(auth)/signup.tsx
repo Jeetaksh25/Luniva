@@ -45,8 +45,8 @@ export default function SignUp() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const [gender, setGender] = useState("");
-  const [dob, setDob] = useState("");
+  const [gender, setGender] = useState("male");
+  const [dob, setDob] = useState(new Date().toISOString().split("T")[0]);
 
   const { signup, loading, user } = useStore();
 
@@ -58,9 +58,10 @@ export default function SignUp() {
 
   const handleSignUP = async () => {
     try {
-      const extraData: { gender?: string; dob?: string } = {};
-      if (gender?.trim()) extraData.gender = gender.trim();
-      if (dob?.trim()) extraData.dob = dob.trim();
+      const extraData = {
+        gender: gender || null,
+        dob: dob || null,
+      };
 
       await signup(email.trim(), password.trim(), username.trim(), extraData);
 
@@ -71,7 +72,7 @@ export default function SignUp() {
       console.log("Signup error:", error);
 
       // Error feedback
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       ToastAndroid.show(
         error?.message || "Signup failed ❌",
         ToastAndroid.LONG

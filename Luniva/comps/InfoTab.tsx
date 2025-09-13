@@ -7,7 +7,7 @@ import { darkenColor } from "@/functions/darkenColor";
 interface InfoTabProps {
   label: string;
   value: any;
-  column?: boolean; 
+  column?: boolean;
 }
 
 const InfoTab: FC<InfoTabProps> = ({ label, value, column = false }) => {
@@ -19,29 +19,36 @@ const InfoTab: FC<InfoTabProps> = ({ label, value, column = false }) => {
         {
           backgroundColor: darkenColor(themeColors.background, 10),
           flexDirection: column ? "column" : "row",
+          alignItems: "flex-start",
         },
       ]}
     >
-      <Text style={[styles.label, { color: theme.colors.secondaryColor }]}>
-        {label}:
-      </Text>
       <Text
         style={[
-          styles.value,
-          {
-            color: themeColors.text,
-            textAlign: column ? "left" : "right",
-            marginTop: column ? 4 : 0,
-          },
+          styles.label,
+          { color: theme.colors.secondaryColor, marginRight: column ? 0 : 8 },
         ]}
       >
-        {value}
+        {label}:
       </Text>
+
+      <View style={{ flex: 1 }}>
+        <Text
+          style={[
+            styles.value,
+            {
+              color: themeColors.text,
+              textAlign: "left",
+              flexShrink: 1,
+            },
+          ]}
+        >
+          {value}
+        </Text>
+      </View>
     </View>
   );
 };
-
-export default InfoTab;
 
 const styles = StyleSheet.create({
   container: {
@@ -64,7 +71,8 @@ const styles = StyleSheet.create({
   },
   value: {
     fontSize: theme.fontSize.md,
-    paddingHorizontal: 4,
-    paddingLeft: 10,
+    flexWrap: "wrap",
   },
 });
+
+export default InfoTab;
