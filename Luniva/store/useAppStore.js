@@ -31,8 +31,12 @@ import { db } from "../firebase/config";
 import { getTodayDateString, isToday } from "@/utils/dateUtils";
 import { transformUserMessage } from "@/utils/transformPrompt";
 import { increment } from "firebase/firestore";
+import Constants from "expo-constants";
 
-const API_KEY = "AIzaSyApCBdx6xDwRZhWFEqT7CsGwnvp1mkVEhg";
+const {API_KEY_GEMINI} = Constants.expoConfig.extra.eas;
+
+
+const API_KEY = API_KEY_GEMINI;
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY}`;
 
 export const useStore = create((set, get) => ({
