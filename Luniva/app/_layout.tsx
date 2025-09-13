@@ -3,10 +3,22 @@ import { useEffect } from "react";
 import { StatusBar } from "expo-status-bar";
 import { useColorScheme, StyleSheet } from "react-native";
 import { theme } from "@/theme/theme";
-import { setupDateChangeListener } from "@/services/backgroundService";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 
+import * as Notifications from "expo-notifications";
+import { registerBackgroundTask } from "@/services/backgroundTask";
+
 SplashScreen.preventAutoHideAsync().catch(() => {});
+
+// Configure notification behavior globally
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowBanner: true,
+    shouldShowList: true,
+    shouldPlaySound: true,
+    shouldSetBadge: false,
+  }),
+});
 
 export default function Layout() {
   const colorScheme = useColorScheme();
@@ -14,15 +26,26 @@ export default function Layout() {
     colorScheme === "dark" ? theme.darkTheme : theme.lightTheme;
 
   useEffect(() => {
-    const prepare = async () => {
+    const setup = async () => {
+      // small splash delay
       await new Promise((resolve) => setTimeout(resolve, 1500));
       await SplashScreen.hideAsync();
-    };
-    prepare();
-  }, []);
 
-  useEffect(() => {
-    setupDateChangeListener();
+      // ✅ Ask for notification permission
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== "granted") {
+        alert("Please enable notifications in settings.");
+        return;
+      }
+
+      // ❌ REMOVE direct scheduling here
+      // await scheduleDailyNotifications();
+
+      // ✅ ONLY register background task
+      await registerBackgroundTask();
+    };
+
+    setup();
   }, []);
 
   return (
