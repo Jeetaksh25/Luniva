@@ -108,65 +108,35 @@ export const useStore = create((set, get) => ({
   },
   
 
-  signup: async (email, password, displayName, extraData = {}) => {
+  signup: async (email, password, displayName, dob, gender) => {
     set({ loading: true, error: null });
+  
     try {
       const cred = await createUserWithEmailAndPassword(auth, email, password);
-
-      if (displayName && displayName.trim() !== "") {
+  
+      if (displayName?.trim()) {
         await updateProfile(cred.user, { displayName: displayName.trim() });
       }
-
-      // SANITIZE extraData (unchanged)
-      const sanitizedExtra = {};
-      if (extraData && typeof extraData === "object") {
-        if (Object.prototype.hasOwnProperty.call(extraData, "gender")) {
-          const g =
-            typeof extraData.gender === "string" &&
-            extraData.gender.trim().length
-              ? extraData.gender.trim()
-              : null;
-          sanitizedExtra.gender = g;
-        }
-        if (Object.prototype.hasOwnProperty.call(extraData, "dob")) {
-          const d =
-            typeof extraData.dob === "string" && extraData.dob.trim().length
-              ? extraData.dob.trim()
-              : null;
-          sanitizedExtra.dob = d;
-        }
-      }
-
-      // username + lastLogin payload
-      const username =
-        displayName && displayName.trim() ? displayName.trim() : cred.user.uid;
-      const ensurePayload = {
-        username,
-        ...sanitizedExtra,
-        lastLogin: new Date().toISOString(),
+  
+      // Prepare Firestore payload
+      const username = displayName?.trim() || cred.user.uid;
+      const payload = {
+        username: displayName?.trim() || cred.user.uid,
+        dob: dob?.trim() || null,
+        gender: gender?.trim() || null,
+        email: email?.trim(),
       };
-
-      // Ensure user doc on Firestore with lastLogin
-      await ensureUserDoc(cred.user, ensurePayload);
-
-      // Immediately read back the user doc so UI shows lastLogin right away
-      const freshUserDoc = await get().getUserData(); // uses getUserData in store
-
-      // Set store user immediately — merge auth user and doc
+      await ensureUserDoc(cred.user, payload);
+  
+      const freshUserDoc = await get().getUserData();
+  
       set({
         user: { ...cred.user, ...(freshUserDoc || {}) },
         loading: false,
       });
-
-      // Now initialize auth watchers (onSnapshot, etc.)
-      // This will also set unsubscribe listeners and keep the store in sync
+  
       await get().initAuth();
-
-      // Ensure today's chat exists before navigating to /chat
       await get().createTodayChat();
-
-      // Only navigate AFTER user & today's chat are ready
-      // (Do this in your signup component/flow, e.g. router.push('/chat'))
     } catch (error) {
       console.error("Signup error:", error);
       set({ error, loading: false });

@@ -58,12 +58,8 @@ export default function SignUp() {
 
   const handleSignUP = async () => {
     try {
-      const extraData = {
-        gender: gender || null,
-        dob: dob || null,
-      };
 
-      await signup(email.trim(), password.trim(), username.trim(), extraData);
+      await signup(email.trim(), password.trim(), username.trim(), dob, gender);
 
       // Success feedback
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);

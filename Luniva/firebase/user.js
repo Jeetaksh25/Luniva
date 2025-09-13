@@ -9,41 +9,16 @@ import { db } from "./config";
 import { getTodayDateString } from "@/utils/dateUtils";
 
 // Ensure user document exists and handle streak reset
-export async function ensureUserDoc(user, extraData = {}) {
+export async function ensureUserDoc(user, data = {}) {
   try {
     const ref = doc(db, "users", user.uid);
     const snap = await getDoc(ref);
-
-    const callerProvided = (key) =>
-      Object.prototype.hasOwnProperty.call(extraData, key);
-
-    // Prepare sanitized values
-    const sanitized = {
-      username:
-        callerProvided("username") &&
-        typeof extraData.username === "string" &&
-        extraData.username.trim().length
-          ? extraData.username.trim()
-          : (user.displayName?.toLowerCase()?.replace(/\s+/g, "") ?? ""),
-      gender:
-        callerProvided("gender") &&
-        typeof extraData.gender === "string" &&
-        extraData.gender.trim().length
-          ? extraData.gender.trim()
-          : null,
-      dob:
-        callerProvided("dob") &&
-        typeof extraData.dob === "string" &&
-        extraData.dob.trim().length
-          ? extraData.dob.trim()
-          : null,
-    };
 
     const base = {
       displayName: user.displayName ?? "",
       email: user.email ?? "",
       photoURL: user.photoURL ?? null,
-      username: sanitized.username,
+      username: data.username ?? user.displayName ?? user.uid,
       createdAt: serverTimestamp(),
       lastLogin: serverTimestamp(),
       dailyStreak: 0,
@@ -51,33 +26,27 @@ export async function ensureUserDoc(user, extraData = {}) {
       highestStreak: 0,
       totalDaysChatted: 0,
       totalMessages: 0,
-      gender: sanitized.gender ?? null,
-      dob: sanitized.dob ?? null,  
+      gender: data.gender ?? null,
+      dob: data.dob ?? null,
     };
 
     if (!snap.exists()) {
-      // First time creation
+      // First-time creation
       await setDoc(ref, base);
       console.log("✅ User document created");
     } else {
-      // Update branch
+      // Update lastLogin and optional fields
       const updates = {
         lastLogin: serverTimestamp(),
       };
 
-      if (callerProvided("username")) {
-        updates.username = sanitized.username;
-      }
-      if (callerProvided("gender")) {
-        updates.gender = sanitized.gender;
-      }
-      if (callerProvided("dob")) {
-        updates.dob = sanitized.dob;
-      }
+      if (data.gender) updates.gender = data.gender;
+      if (data.dob) updates.dob = data.dob;
+      if (data.username) updates.username = data.username;
 
-      if (Object.keys(updates).length > 1) {
+      if (Object.keys(updates).length > 0) {
         await updateDoc(ref, updates);
-        console.log("✅ User document updated with provided extraData");
+        console.log("✅ User document updated with extra data");
       }
     }
   } catch (error) {
