@@ -3,12 +3,11 @@ import { transformUserMessage } from "./transformPrompt";
 import { db } from "../firebase/config";
 
 export async function buildPrompt(user: any, message: string, chatId: string) {
-  // Pull user style + context
   const { styleBlock, needsLongResponse } = transformUserMessage(message, user);
 
-  // 🔹 Load recent history (last 6 turns to give AI some context)
+  // Fetch last 5 messages
   const msgsCol = collection(db, "users", user.uid, "chats", chatId, "messages");
-  const q = query(msgsCol, orderBy("createdAt", "desc"), limit(10));
+  const q = query(msgsCol, orderBy("createdAt", "desc"), limit(8));
   const snap = await getDocs(q);
 
   const recentMessages = snap.docs
@@ -22,12 +21,15 @@ export async function buildPrompt(user: any, message: string, chatId: string) {
   return `
 ${styleBlock}
 
-Recent conversation (last few turns):
+Recent convo (last few msgs):
 ${recentMessages}
 
-Now the user says: "${message}"
-${needsLongResponse
-  ? "👉 Provide a **long, structured, calming reply**."
-  : "👉 Provide a **short, caring, human-like reply**, starting with a single emoji."}
+Now user says: "${message}"
+
+${
+  needsLongResponse
+    ? "👉 Reply calm, structured, short but complete. Use first emoji wisely based on emotion."
+    : "👉 Reply short, playful, warm. Start with 1 context-aware emoji, then natural text. Use emoji intelligently."
+}
 `;
 }

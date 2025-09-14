@@ -13,6 +13,11 @@ import {
   getDocs,
   Timestamp,
   DocumentData,
+  limitToLast,
+  startAfter,
+  limit,
+  deleteDoc,
+  getDocFromCache,  
 } from "firebase/firestore";
 import { db } from "./config";
 import { updateUserStreak } from "./user";
@@ -141,7 +146,7 @@ export async function sendAIMessage(uid: string, chatId: string, text: string, e
 // Fix the watchMessages function to handle Firestore timestamps
 export function watchMessages(uid: string, chatId: string, callback: (messages: any[]) => void) {
   const msgsCol = collection(db, "users", uid, "chats", chatId, "messages");
-  const q = query(msgsCol, orderBy("createdAt", "asc"));
+  const q = query(msgsCol, orderBy("createdAt", "asc"),limitToLast(10));
   
   console.log("Setting up message listener for:", uid, chatId);
   
@@ -168,6 +173,36 @@ export function watchMessages(uid: string, chatId: string, callback: (messages: 
   );
 }
 
+export async function loadOlderMessages(uid: string, chatId: string, firstMessage: any) {
+  if (!firstMessage?.createdAt) return [];
+
+  const msgsCol = collection(db, "users", uid, "chats", chatId, "messages");
+
+  // Use Firestore Timestamp if available
+  const startAfterValue =
+    firstMessage.createdAt instanceof Date
+      ? Timestamp.fromDate(firstMessage.createdAt)
+      : firstMessage.createdAt; // if already Timestamp
+
+  const q = query(
+    msgsCol,
+    orderBy("createdAt", "desc"),
+    startAfter(startAfterValue),
+    limit(10)
+  );
+
+  const snap = await getDocs(q);
+  const older = snap.docs.map((d) => {
+    const data = d.data();
+    const createdAt = data.createdAt?.toDate
+      ? data.createdAt.toDate()
+      : new Date(data.createdAt?.seconds * 1000) || new Date();
+
+    return { id: d.id, ...data, createdAt };
+  });
+
+  return older.reverse(); // oldest → newest
+}
 export async function getChatsForMonth(
   uid: string,
   month: number,

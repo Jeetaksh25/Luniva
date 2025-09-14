@@ -28,6 +28,7 @@ import * as Haptics from "expo-haptics";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { useModeColor } from "@/theme/modeColor";
 import EmptyChat from "@/comps/EmptyChat";
+import { loadOlderMessages } from "@/firebase/chat";
 
 import Animated, {
   useSharedValue,
@@ -68,19 +69,21 @@ const Chat = () => {
   const [isTodayChat, setIsTodayChat] = useState(true);
   const [isRedirecting, setIsRedirecting] = useState(false);
 
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+
   const float = useSharedValue(0);
   const fade = useSharedValue(1);
 
   const flatListRef = useRef<FlatList>(null);
   const typingTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastAiIdRef = useRef<string | null>(null);
-
+  const lastMessageIdRef = useRef<string | null>(null);
   const messageInputRef = useRef<any>(null);
 
   const focusMessageInput = useCallback(() => {
     messageInputRef.current?.focus();
   }, []);
-
 
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateY: float.value }],
@@ -128,6 +131,36 @@ const Chat = () => {
     },
     [currentChatId, createTodayChat, sendMessage]
   );
+
+  const handleLoadOlder = useCallback(async () => {
+    if (loadingOlder || !hasMore || messages.length === 0) return;
+
+    setLoadingOlder(true);
+    try {
+      const firstMessage = messages[0];
+      const older = await loadOlderMessages(
+        user.uid,
+        currentChatId,
+        firstMessage
+      );
+
+      if (older.length === 0) {
+        setHasMore(false);
+      } else {
+        // Save current scroll height
+        flatListRef.current?.recordInteraction();
+        flatListRef.current?.scrollToOffset({ offset: 1, animated: false });
+
+        useStore.setState((s: any) => ({
+          messages: [...older, ...s.messages],
+        }));
+      }
+    } catch (err) {
+      console.error("Error loading older messages:", err);
+    } finally {
+      setLoadingOlder(false);
+    }
+  }, [loadingOlder, hasMore, messages, user?.uid, currentChatId]);
 
   // ---------------- Pan Responder (Always called) ----------------
   const panResponder = useRef(
@@ -186,7 +219,9 @@ const Chat = () => {
       setLastAIText(latestAI.text);
 
       const text = latestAI?.text ?? "";
-      const match = text.trim().match(/^(\p{Extended_Pictographic}|\p{Emoji})/u);
+      const match = text
+        .trim()
+        .match(/^(\p{Extended_Pictographic}|\p{Emoji})/u);
       const emoji = match ? match[0] : "🙂";
 
       fade.value = withTiming(
@@ -275,9 +310,18 @@ const Chat = () => {
   }, []);
 
   // Auto-scroll effect
+
+  const scrollToBottom = () => {
+    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+  };
+
   useEffect(() => {
-    flatListRef.current?.scrollToEnd({ animated: true });
-  }, [messages]);
+    if (messages.length > 0) scrollToBottom();
+  }, [messages, scrollToBottom]);
+
+  useEffect(() => {
+    if (isAiTyping) scrollToBottom();
+  }, [isAiTyping, scrollToBottom]);
 
   const renderInputComponent = () => {
     if (currentChatId && isTodayChat) {
@@ -405,8 +449,9 @@ const Chat = () => {
               />
             ) : (
               <FlatList
+                inverted
                 ref={flatListRef}
-                data={messages}
+                data={[...messages].reverse()}
                 keyExtractor={(item, idx) => item?.id ?? `msg-${idx}`}
                 renderItem={({ item }) => (
                   <ChatBubble
@@ -424,9 +469,28 @@ const Chat = () => {
                   />
                 )}
                 contentContainerStyle={styles.listContent}
-                onContentSizeChange={() =>
-                  flatListRef.current?.scrollToEnd({ animated: true })
+                onEndReachedThreshold={0.2} // 🔹 triggers when scrolling up
+                onEndReached={handleLoadOlder} // 🔹 load more at top
+                ListFooterComponent={
+                  // 🔹 loader shows at top (because of inverted)
+                  loadingOlder ? (
+                    <Text
+                      style={{
+                        textAlign: "center",
+                        padding: 10,
+                        color: themeColors.text,
+                      }}
+                    >
+                      Loading older chat...
+                    </Text>
+                  ) : null
                 }
+                maintainVisibleContentPosition={{
+                  minIndexForVisible: 0, // keeps scroll stable when prepending
+                }}
+                onContentSizeChange={() => {
+                  flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+                }}
               />
             )}
           </View>
