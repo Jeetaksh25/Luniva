@@ -32,7 +32,7 @@ import { getTodayDateString, isToday } from "@/utils/dateUtils";
 import { transformUserMessage } from "@/utils/transformPrompt";
 import { increment } from "firebase/firestore";
 import Constants from "expo-constants";
-
+import { buildPrompt } from "@/utils/buildPrompt";
 const {API_KEY_GEMINI} = Constants.expoConfig.extra.eas;
 
 
@@ -225,11 +225,14 @@ export const useStore = create((set, get) => ({
       set({ isAiTyping: true });
 
       // ✅ Send to Gemini API
+
+      const prompt = await buildPrompt(user,text,chatId);
+
       const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{ parts: [{ text: transformUserMessage(text, user) }] }],
+          contents: [{ parts: [{ text: prompt }] }],
         }),
       });
 
