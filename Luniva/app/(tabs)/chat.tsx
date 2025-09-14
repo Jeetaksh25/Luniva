@@ -39,6 +39,8 @@ import Animated, {
   runOnJS,
 } from "react-native-reanimated";
 
+import { Audio } from "expo-av";
+
 const { width } = Dimensions.get("window");
 const SWIPE_THRESHOLD = 50;
 
@@ -112,9 +114,67 @@ const Chat = () => {
     router.push("/profile");
   }, [router]);
 
+  const sendSound = new Audio.Sound();
+  const receiveSound = new Audio.Sound();
+
+  const playSound = async (soundFile: any) => {
+    try {
+      const { sound } = await Audio.Sound.createAsync(soundFile);
+      await sound.playAsync();
+      // Unload after playing to free memory
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if ("isLoaded" in status && status.isLoaded && status.didJustFinish) {
+          sound.unloadAsync();
+        }
+      });
+    } catch (err) {
+      console.log("Sound play error:", err);
+    }
+  };
+
+  const loadSounds = async () => {
+    try {
+      await sendSound.loadAsync(require("@/assets/sounds/send.mp3"));
+      await receiveSound.loadAsync(require("@/assets/sounds/receive.mp3"));
+    } catch (err) {
+      console.log("Failed to load sounds:", err);
+    }
+  };
+
+  useEffect(() => {
+    loadSounds();
+
+    return () => {
+      sendSound.unloadAsync();
+      receiveSound.unloadAsync();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (messages.length === 0) return;
+  
+    const lastMsg = messages[messages.length - 1];
+  
+    if (lastMessageIdRef.current && lastMsg.id !== lastMessageIdRef.current) {
+      // Only play sound for new messages
+      if (lastMsg.role === "ai") {
+        playSound(require("@/assets/sounds/receive.mp3"));
+      }
+    }
+  
+    lastMessageIdRef.current = lastMsg.id;
+  }, [messages]);
+
   const handleSendMessage = useCallback(
     async (messageText: string) => {
       if (!messageText.trim()) return;
+
+      try {
+        await sendSound.replayAsync();
+      } catch (err) {
+        console.log("Send sound error:", err);
+      }
+
       if (!currentChatId) {
         setIsCreatingChat(true);
         try {
@@ -141,7 +201,7 @@ const Chat = () => {
     const loaderTimeout = setTimeout(() => {
       setShowLoadingOlder(false);
     }, 300);
-  
+
     try {
       const firstMessage = messages[0];
       const older = await loadOlderMessages(
@@ -160,7 +220,6 @@ const Chat = () => {
         useStore.setState((s: any) => ({
           messages: [...older, ...s.messages],
         }));
-        
       }
     } catch (err) {
       console.error("Error loading older messages:", err);
@@ -215,6 +274,7 @@ const Chat = () => {
       if (typingTimerRef.current) clearInterval(typingTimerRef.current);
     };
   }, [isAiTyping]);
+
 
   // Emoji animation effect
   useEffect(() => {
@@ -482,8 +542,8 @@ const Chat = () => {
                   />
                 )}
                 contentContainerStyle={styles.listContent}
-                onEndReachedThreshold={0.2} // 🔹 triggers when scrolling up
-                onEndReached={handleLoadOlder} // 🔹 load more at top
+                onEndReachedThreshold={0.2}
+                onEndReached={handleLoadOlder}
                 ListHeaderComponent={
                   showLoadingOlder ? (
                     <Text
@@ -498,7 +558,7 @@ const Chat = () => {
                   ) : null
                 }
                 maintainVisibleContentPosition={{
-                  minIndexForVisible: 0, // keeps scroll stable when prepending
+                  minIndexForVisible: 0,
                 }}
                 onContentSizeChange={() => {
                   flatListRef.current?.scrollToOffset({
