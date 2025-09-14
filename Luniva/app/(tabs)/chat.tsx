@@ -384,7 +384,7 @@ const Chat = () => {
   const scrollToBottom = () => {
     if (flatListRef.current && messages.length > 0) {
       flatListRef.current.scrollToIndex({
-        index: messages.length - 1,
+        index: 0,
         animated: true,
       });
     }
