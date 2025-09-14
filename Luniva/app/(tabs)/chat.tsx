@@ -524,7 +524,7 @@ const Chat = () => {
               <FlatList
                 inverted
                 ref={flatListRef}
-                data={[...messages].reverse()}
+                data={[...messages]}
                 keyExtractor={(item, idx) => item?.id ?? `msg-${idx}`}
                 renderItem={({ item }) => (
                   <ChatBubble
@@ -566,6 +566,11 @@ const Chat = () => {
                     animated: true,
                   });
                 }}
+                getItemLayout={(data, index) => ({
+                  length: 80,
+                  offset: 80 * index,
+                  index,
+                })}
               />
             )}
           </View>
@@ -594,7 +599,11 @@ const styles = StyleSheet.create({
     paddingBottom: 5,
   },
   emoji: { fontSize: 80 },
-  listContent: { paddingHorizontal: 20, paddingVertical: 5, flexGrow: 1 },
+  listContent: { 
+    paddingHorizontal: 20, 
+    paddingVertical: 5, 
+    flexDirection: "column-reverse",
+   },
   menuIcon: { position: "absolute", top: 60, left: 20, zIndex: 1 },
   creatingChatOverlay: {
     position: "absolute",
