@@ -7,6 +7,7 @@ import { GestureHandlerRootView } from "react-native-gesture-handler";
 
 import * as Notifications from "expo-notifications";
 import { registerBackgroundTask } from "@/services/backgroundTask";
+import { scheduleDailyNotifications } from "@/services/notificationService";
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -39,7 +40,7 @@ export default function Layout() {
       }
 
       // ❌ REMOVE direct scheduling here
-      // await scheduleDailyNotifications();
+      await scheduleDailyNotifications();
 
       // ✅ ONLY register background task
       await registerBackgroundTask();
