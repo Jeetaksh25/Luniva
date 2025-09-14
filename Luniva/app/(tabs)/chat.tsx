@@ -152,16 +152,16 @@ const Chat = () => {
 
   useEffect(() => {
     if (messages.length === 0) return;
-  
+
     const lastMsg = messages[messages.length - 1];
-  
+
     if (lastMessageIdRef.current && lastMsg.id !== lastMessageIdRef.current) {
       // Only play sound for new messages
       if (lastMsg.role === "ai") {
         playSound(require("@/assets/sounds/receive.mp3"));
       }
     }
-  
+
     lastMessageIdRef.current = lastMsg.id;
   }, [messages]);
 
@@ -274,7 +274,6 @@ const Chat = () => {
       if (typingTimerRef.current) clearInterval(typingTimerRef.current);
     };
   }, [isAiTyping]);
-
 
   // Emoji animation effect
   useEffect(() => {
@@ -445,7 +444,7 @@ const Chat = () => {
     >
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        behavior={Platform.OS === "ios" ? "padding" : "padding"}
         enabled={keyboardVisible}
       >
         <View
@@ -524,7 +523,7 @@ const Chat = () => {
               <FlatList
                 inverted
                 ref={flatListRef}
-                data={[...messages]}
+                data={[...messages].reverse()}
                 keyExtractor={(item, idx) => item?.id ?? `msg-${idx}`}
                 renderItem={({ item }) => (
                   <ChatBubble
@@ -544,8 +543,8 @@ const Chat = () => {
                 contentContainerStyle={styles.listContent}
                 onEndReachedThreshold={0.2}
                 onEndReached={handleLoadOlder}
-                ListHeaderComponent={
-                  showLoadingOlder ? (
+                ListFooterComponent={
+                  loadingOlder ? (
                     <Text
                       style={{
                         textAlign: "center",
@@ -557,20 +556,7 @@ const Chat = () => {
                     </Text>
                   ) : null
                 }
-                maintainVisibleContentPosition={{
-                  minIndexForVisible: 0,
-                }}
-                onContentSizeChange={() => {
-                  flatListRef.current?.scrollToOffset({
-                    offset: 0,
-                    animated: true,
-                  });
-                }}
-                getItemLayout={(data, index) => ({
-                  length: 80,
-                  offset: 80 * index,
-                  index,
-                })}
+                maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
               />
             )}
           </View>
@@ -599,11 +585,10 @@ const styles = StyleSheet.create({
     paddingBottom: 5,
   },
   emoji: { fontSize: 80 },
-  listContent: { 
-    paddingHorizontal: 20, 
-    paddingVertical: 5, 
-    flexDirection: "column-reverse",
-   },
+  listContent: {
+    paddingHorizontal: 20,
+    paddingVertical: 5,
+  },
   menuIcon: { position: "absolute", top: 60, left: 20, zIndex: 1 },
   creatingChatOverlay: {
     position: "absolute",
