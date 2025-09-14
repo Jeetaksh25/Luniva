@@ -131,11 +131,17 @@ const Chat = () => {
     },
     [currentChatId, createTodayChat, sendMessage]
   );
-
+  const [showLoadingOlder, setShowLoadingOlder] = useState(false);
   const handleLoadOlder = useCallback(async () => {
     if (loadingOlder || !hasMore || messages.length === 0) return;
 
     setLoadingOlder(true);
+    setShowLoadingOlder(true);
+
+    const loaderTimeout = setTimeout(() => {
+      setShowLoadingOlder(false);
+    }, 300);
+  
     try {
       const firstMessage = messages[0];
       const older = await loadOlderMessages(
@@ -154,6 +160,7 @@ const Chat = () => {
         useStore.setState((s: any) => ({
           messages: [...older, ...s.messages],
         }));
+        
       }
     } catch (err) {
       console.error("Error loading older messages:", err);
@@ -312,7 +319,13 @@ const Chat = () => {
   // Auto-scroll effect
 
   const scrollToBottom = () => {
-    flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+    if (flatListRef.current && messages.length > 0) {
+      flatListRef.current.scrollToIndex({
+        index: 0,
+        animated: true,
+        viewPosition: 0,
+      });
+    }
   };
 
   useEffect(() => {
@@ -471,9 +484,8 @@ const Chat = () => {
                 contentContainerStyle={styles.listContent}
                 onEndReachedThreshold={0.2} // 🔹 triggers when scrolling up
                 onEndReached={handleLoadOlder} // 🔹 load more at top
-                ListFooterComponent={
-                  // 🔹 loader shows at top (because of inverted)
-                  loadingOlder ? (
+                ListHeaderComponent={
+                  showLoadingOlder ? (
                     <Text
                       style={{
                         textAlign: "center",
@@ -489,7 +501,10 @@ const Chat = () => {
                   minIndexForVisible: 0, // keeps scroll stable when prepending
                 }}
                 onContentSizeChange={() => {
-                  flatListRef.current?.scrollToOffset({ offset: 0, animated: true });
+                  flatListRef.current?.scrollToOffset({
+                    offset: 0,
+                    animated: true,
+                  });
                 }}
               />
             )}
