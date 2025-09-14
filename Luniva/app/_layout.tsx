@@ -36,7 +36,8 @@ export default function Layout() {
         Alert.alert("Please enable notifications in settings.");
         return;
       }
-
+      
+      await scheduleDailyNotifications()
       await initializeBackgroundTask();
     };
 

@@ -42,63 +42,66 @@ export async function hasChattedToday() {
 }
 
 export async function scheduleDailyNotifications() {
-  const today = new Date().toDateString();
-  const lastScheduled = await AsyncStorage.getItem("lastScheduledDate");
+  try {
+    const today = getTodayDateString();
+    const lastScheduled = await AsyncStorage.getItem("lastScheduledDate");
 
-  // Only skip if we scheduled for today already
-  if (lastScheduled === today) return;
+    if (lastScheduled === today) return;
 
-  const now = new Date();
-  const notificationIds = [];
+    await Notifications.cancelAllScheduledNotificationsAsync();
 
-  // Schedule 4 main notifications for today and tomorrow
-  const times = [10, 13, 16, 19];
-  const days = [0, 1]; // 0 = today, 1 = tomorrow
+    const now = new Date();
+    const notificationIds = [];
 
-  for (const dayOffset of days) {
-    for (let i = 0; i < 4; i++) {
+    // Main notifications at 10, 13, 16, 19
+    const times = [10, 13, 16, 19];
+    for (const hour of times) {
       const notifTime = new Date();
-      notifTime.setDate(notifTime.getDate() + dayOffset);
-      notifTime.setHours(times[i], 0, 0, 0);
+      notifTime.setHours(hour, 0, 0, 0);
 
-      // Skip past notifications for today only
-      if (dayOffset === 0 && notifTime <= now) continue;
+      // Only schedule future notifications
+      if (notifTime <= now) continue;
 
       const selected = getRandomNotifications(1)[0];
       const id = await Notifications.scheduleNotificationAsync({
         content: { title: "Luniva Reminder", body: selected },
-        trigger: { hour: notifTime.getHours(), minute: notifTime.getMinutes(), repeats: true },
+        trigger: {
+          type: "daily",
+          hour: notifTime.getHours(),
+          minute: notifTime.getMinutes(),
+        },
       });
       notificationIds.push(id);
     }
-  }
 
-  // Schedule streak notifications if user hasn't chatted today
-  const chatted = await hasChattedToday();
-  if (!chatted) {
-    const streakPick = getRandomNotifications(2, streakNotifications);
-    const streakTimes = [12, 18];
-    for (let i = 0; i < streakPick.length; i++) {
-      for (const dayOffset of days) {
+    // Streak notifications if user hasn't chatted
+    const chatted = await hasChattedToday();
+    if (!chatted) {
+      const streakPick = getRandomNotifications(2, streakNotifications);
+      const streakTimes = [12, 18];
+      for (let i = 0; i < streakPick.length; i++) {
         const notifTime = new Date();
-        notifTime.setDate(notifTime.getDate() + dayOffset);
         notifTime.setHours(streakTimes[i], 30, 0, 0);
-
-        // Skip past streak notifications for today only
-        if (dayOffset === 0 && notifTime <= now) continue;
+        if (notifTime <= now) continue;
 
         const id = await Notifications.scheduleNotificationAsync({
           content: { title: "🔥 Don’t lose your streak!", body: streakPick[i] },
-          trigger: { hour: notifTime.getHours(), minute: notifTime.getMinutes(), repeats: true },
+          trigger: {
+            type: "daily",
+            hour: notifTime.getHours(),
+            minute: notifTime.getMinutes(),
+          },
         });
         notificationIds.push(id);
       }
     }
-  }
 
-  await AsyncStorage.setItem("lastScheduledDate", today);
-  await AsyncStorage.setItem(
-    "scheduledNotifications",
-    JSON.stringify(notificationIds)
-  );
+    await AsyncStorage.setItem("lastScheduledDate", today);
+    await AsyncStorage.setItem(
+      "scheduledNotifications",
+      JSON.stringify(notificationIds)
+    );
+  } catch (error) {
+    console.error("Failed to schedule notifications:", error);
+  }
 }
