@@ -188,6 +188,10 @@ const Chat = () => {
       } else {
         sendMessage(messageText);
       }
+
+      scrollToBottom();
+
+      Keyboard.dismiss();
     },
     [currentChatId, createTodayChat, sendMessage]
   );
@@ -380,11 +384,21 @@ const Chat = () => {
   const scrollToBottom = () => {
     if (flatListRef.current && messages.length > 0) {
       flatListRef.current.scrollToIndex({
-        index: 0,
+        index: messages.length - 1,
         animated: true,
-        viewPosition: 0,
       });
     }
+  };
+
+  const handleScrollToIndexFailed = (info: {
+    index: number;
+    highestMeasuredFrameIndex: number;
+    averageItemLength: number;
+  }) => {
+    flatListRef.current?.scrollToOffset({
+      offset: info.averageItemLength * info.index,
+      animated: true,
+    });
   };
 
   useEffect(() => {
@@ -557,6 +571,7 @@ const Chat = () => {
                   ) : null
                 }
                 maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+                onScrollToIndexFailed={handleScrollToIndexFailed}
               />
             )}
           </View>
@@ -588,6 +603,7 @@ const styles = StyleSheet.create({
   listContent: {
     paddingHorizontal: 20,
     paddingVertical: 5,
+    paddingTop: 100,
   },
   menuIcon: { position: "absolute", top: 60, left: 20, zIndex: 1 },
   creatingChatOverlay: {
