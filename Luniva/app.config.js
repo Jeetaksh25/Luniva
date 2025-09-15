@@ -12,11 +12,20 @@ export default {
     newArchEnabled: true,
     ios: {
       supportsTablet: true,
+      notifications: {
+        iosDisplayInForeground: true,
+        sound: true,
+      },
     },
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: "#1E1B24",
+      },
+      sound: true,
+      useNextNotificationsApi: true,
+      resources: {
+        raw: ["./assets/sounds/notification.wav"]
       },
       edgeToEdgeEnabled: false,
       package: "com.jeetaksh.Luniva",
@@ -54,7 +63,7 @@ export default {
         APP_ID_FIREBASE: process.env.APP_ID_FIREBASE,
         MEASUREMENT_ID_FIREBASE: process.env.MEASUREMENT_ID_FIREBASE,
 
-        API_KEY_GEMINI: process.env.API_KEY_GEMINI
+        API_KEY_GEMINI: process.env.API_KEY_GEMINI,
       },
     },
   },

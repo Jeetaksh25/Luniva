@@ -64,7 +64,7 @@ export async function scheduleDailyNotifications() {
 
       const selected = getRandomNotifications(1)[0];
       const id = await Notifications.scheduleNotificationAsync({
-        content: { title: "Luniva Reminder", body: selected },
+        content: { title: "Luniva Reminder", body: selected, sound: "notification" },
         trigger: { hour, minute: 0, repeats: true },
       });
       notificationIds.push(id);
@@ -81,7 +81,7 @@ export async function scheduleDailyNotifications() {
         if (notifTime <= now) continue;
 
         const id = await Notifications.scheduleNotificationAsync({
-          content: { title: "🔥 Don’t lose your streak!", body: streakPick[i] },
+          content: { title: "🔥 Don’t lose your streak!", body: streakPick[i], sound: "notification" },
           trigger: { hour: streakTimes[i], minute: 30, repeats: true },
         });
         notificationIds.push(id);
