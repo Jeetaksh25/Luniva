@@ -65,11 +65,7 @@ export async function scheduleDailyNotifications() {
       const selected = getRandomNotifications(1)[0];
       const id = await Notifications.scheduleNotificationAsync({
         content: { title: "Luniva Reminder", body: selected },
-        trigger: {
-          type: "daily",
-          hour: notifTime.getHours(),
-          minute: notifTime.getMinutes(),
-        },
+        trigger: { hour, minute: 0, repeats: true },
       });
       notificationIds.push(id);
     }
@@ -86,11 +82,7 @@ export async function scheduleDailyNotifications() {
 
         const id = await Notifications.scheduleNotificationAsync({
           content: { title: "🔥 Don’t lose your streak!", body: streakPick[i] },
-          trigger: {
-            type: "daily",
-            hour: notifTime.getHours(),
-            minute: notifTime.getMinutes(),
-          },
+          trigger: { hour: streakTimes[i], minute: 30, repeats: true },
         });
         notificationIds.push(id);
       }
