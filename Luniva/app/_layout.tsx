@@ -1,5 +1,5 @@
 import { Stack, SplashScreen } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { StatusBar } from "expo-status-bar";
 import { useColorScheme, StyleSheet, Alert, Platform, Linking } from "react-native";
 import { theme } from "@/theme/theme";
@@ -23,8 +23,26 @@ Notifications.setNotificationHandler({
 
 export default function Layout() {
   const colorScheme = useColorScheme();
-  const themeColors =
-    colorScheme === "dark" ? theme.darkTheme : theme.lightTheme;
+  const themeColors = colorScheme === "dark" ? theme.darkTheme : theme.lightTheme;
+  const [startTime] = useState(Date.now());
+  const FORM_URL = "https://forms.gle/yourGoogleFormLink";
+
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      Alert.alert(
+        "Enjoying talking to Luniva?",
+        "We’d love your feedback! Want to share your thoughts?",
+        [
+          { text: "Maybe Later", style: "cancel" },
+          { text: "Sure!", onPress: () => Linking.openURL(FORM_URL) },
+        ]
+      );
+    }, 10 * 60 * 1000);
+  
+    return () => clearInterval(interval);
+  }, []);
+  
 
   useEffect(() => {
     const setup = async () => {

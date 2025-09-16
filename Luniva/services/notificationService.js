@@ -60,11 +60,17 @@ export async function scheduleDailyNotifications() {
       notifTime.setHours(hour, 0, 0, 0);
 
       // Only schedule future notifications
-      if (notifTime <= now) continue;
+      if (notifTime <= now) {
+        notifTime.setDate(notifTime.getDate() + 1);
+      }
 
       const selected = getRandomNotifications(1)[0];
       const id = await Notifications.scheduleNotificationAsync({
-        content: { title: "Luniva Reminder", body: selected, sound: "notification" },
+        content: {
+          title: "Luniva Reminder",
+          body: selected,
+          sound: "notification",
+        },
         trigger: { hour, minute: 0, repeats: true },
       });
       notificationIds.push(id);
@@ -74,14 +80,21 @@ export async function scheduleDailyNotifications() {
     const chatted = await hasChattedToday();
     if (!chatted) {
       const streakPick = getRandomNotifications(2, streakNotifications);
-      const streakTimes = [12, 18];
+      const streakTimes = [7, 22];
       for (let i = 0; i < streakPick.length; i++) {
         const notifTime = new Date();
         notifTime.setHours(streakTimes[i], 30, 0, 0);
-        if (notifTime <= now) continue;
+
+        if (notifTime <= now) {
+          notifTime.setDate(notifTime.getDate() + 1);
+        }
 
         const id = await Notifications.scheduleNotificationAsync({
-          content: { title: "🔥 Don’t lose your streak!", body: streakPick[i], sound: "notification" },
+          content: {
+            title: "🔥 Don’t lose your streak!",
+            body: streakPick[i],
+            sound: "notification",
+          },
           trigger: { hour: streakTimes[i], minute: 30, repeats: true },
         });
         notificationIds.push(id);
