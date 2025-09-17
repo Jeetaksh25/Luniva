@@ -1,5 +1,12 @@
-import React, { useMemo } from "react";
-import { View, Text, ScrollView, StyleSheet, Dimensions } from "react-native";
+import React, { useMemo, useRef } from "react";
+import {
+  View,
+  Text,
+  ScrollView,
+  StyleSheet,
+  Dimensions,
+  TouchableOpacity,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useStore } from "@/store/useAppStore";
 import { useModeColor } from "@/theme/modeColor";
@@ -9,6 +16,7 @@ import { getChatTrend, renderZigZag2 } from "@/utils/chatTrend";
 import { Svg, Path, Circle } from "react-native-svg";
 import { getStreakPercentage } from "@/utils/StreakPercentage";
 import { LinearGradient } from "expo-linear-gradient";
+import SummaryCard from "@/comps/SummaryCard";
 
 const Progress = () => {
   const themeColors = useModeColor();
@@ -46,8 +54,15 @@ const Progress = () => {
   const zigzagPath = renderZigZag2(trend, screenWidth);
 
   const progress = useMemo(() => {
-    return getStreakPercentage(user.dailyStreak);
-  }, [userStats]);
+    if (!user) return { percentage: 0, milestone: 0 };
+    return getStreakPercentage(user.dailyStreak || 0);
+  }, [user]);
+
+  const scrollRef = useRef<ScrollView>(null);
+
+  const handleScrollToSummary = () => {
+    scrollRef.current?.scrollToEnd({ animated: true });
+  };
 
   return (
     <SafeAreaView
@@ -251,6 +266,13 @@ const Progress = () => {
           </LinearGradient>
         </View>
 
+        <TouchableOpacity
+          style={styles.scrollBtn}
+          onPress={handleScrollToSummary}
+        >
+          <Text style={styles.scrollBtnText}>View Weekly Summary</Text>
+        </TouchableOpacity>
+
         <View>
           <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
             Highlights
@@ -312,6 +334,7 @@ const Progress = () => {
             </View>
           </View>
         </View>
+        <SummaryCard chats={chats} />
       </ScrollView>
     </SafeAreaView>
   );
@@ -409,4 +432,12 @@ const styles = StyleSheet.create({
     fontSize: theme.fontSize.xs,
     fontWeight: "600",
   },
+  scrollBtn: {
+    marginTop: 15,
+    padding: 10,
+    backgroundColor: theme.colors.primaryColor,
+    borderRadius: theme.borderRadius.md,
+    alignItems: "center",
+  },
+  scrollBtnText: { color: "white", fontWeight: "700" },
 });

@@ -20,7 +20,9 @@
     "@react-navigation/native": "^7.1.6",
     "dotenv": "^17.2.2",
     "expo": "^54.0.1",
+    "expo-ads-admob": "^13.0.0",
     "expo-auth-session": "~7.0.7",
+    "expo-av": "~16.0.7",
     "expo-background-fetch": "~14.0.7",
     "expo-background-task": "~1.0.7",
     "expo-blur": "~15.0.6",
@@ -64,8 +66,7 @@
     "react-test-renderer": "^19.1.0",
     "tailwindcss": "^3.4.17",
     "toastify-react-native": "^7.2.3",
-    "zustand": "^5.0.8",
-    "expo-av": "~16.0.7"
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
