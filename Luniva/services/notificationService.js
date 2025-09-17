@@ -48,8 +48,6 @@ export async function scheduleDailyNotifications() {
 
     if (lastScheduled === today) return;
 
-    await Notifications.cancelAllScheduledNotificationsAsync();
-
     const now = new Date();
     const notificationIds = [];
 
