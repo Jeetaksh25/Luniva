@@ -16,6 +16,7 @@ import * as BackgroundTask from "expo-background-task";
 import { initializeBackgroundTask } from "@/services/backgroundTask";
 import { scheduleDailyNotifications } from "@/services/notificationService";
 import { useRef } from "react";
+import "expo-dev-client"
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 

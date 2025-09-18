@@ -10,31 +10,27 @@ export default {
     scheme: "luniva",
     userInterfaceStyle: "automatic",
     newArchEnabled: true,
+
     ios: {
       supportsTablet: true,
-      notifications: {
-        iosDisplayInForeground: true,
-        sound: true,
-      },
+      bundleIdentifier: "com.jeetaksh.Luniva",
     },
+
     android: {
       adaptiveIcon: {
         foregroundImage: "./assets/images/adaptive-icon.png",
         backgroundColor: "#1E1B24",
       },
-      sound: true,
-      useNextNotificationsApi: true,
-      resources: {
-        raw: ["./assets/sounds/notification.wav"]
-      },
-      edgeToEdgeEnabled: false,
       package: "com.jeetaksh.Luniva",
+      edgeToEdgeEnabled: false,
     },
+
     web: {
       bundler: "metro",
       output: "static",
       favicon: "./assets/images/icon.png",
     },
+
     plugins: [
       "expo-router",
       [
@@ -47,10 +43,30 @@ export default {
         },
       ],
       "expo-background-task",
+      [
+        "react-native-google-mobile-ads",
+        {
+          androidAppId: "ca-app-pub-5138208417933601~2870499783",
+          iosAppId: "ca-app-pub-5138208417933601~2870499783",
+        },
+      ],
+      [
+        "expo-notifications",
+        {
+          icon: "./assets/images/icon.png",
+          color: "#ffffff",
+          defaultChannel: "default",
+          sounds: ["./assets/sounds/notification.wav"],
+          enableBackgroundRemoteNotifications: true,
+        },
+      ],
+      "expo-web-browser", 
     ],
+
     experiments: {
       typedRoutes: true,
     },
+
     extra: {
       router: {},
       eas: {
@@ -59,7 +75,7 @@ export default {
         AUTH_DOMAIN_FIREBASE: process.env.AUTH_DOMAIN_FIREBASE,
         PROJECT_ID_FIREBASE: process.env.PROJECT_ID_FIREBASE,
         STORAGE_BUCKET_FIREBASE: process.env.STORAGE_BUCKET_FIREBASE,
-        MESSAGING_SENDER_ID_FIREBASE: process.env.MESSAGING_SENDER_ID_FIREBASE,
+        MESSAGING_SENDER_ID_FIREBASE: process.env.MESSAGING_SENDER_FIREBASE,
         APP_ID_FIREBASE: process.env.APP_ID_FIREBASE,
         MEASUREMENT_ID_FIREBASE: process.env.MEASUREMENT_ID_FIREBASE,
 
