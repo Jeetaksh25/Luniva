@@ -327,6 +327,7 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
             fontWeight: "bold",
             marginBottom: 8,
             color: themeColors.primaryText,
+            textAlign: "center",
           }}
         >
           AI Chat Summary
@@ -343,6 +344,8 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
                 const selected = days === val;
                 const isFirst = idx === 0;
                 const isLast = idx === arr.length - 1;
+
+                const label = val === 7 ? "Weekly Recap" : "Monthly Reflection";
 
                 return (
                   <Pressable
@@ -377,7 +380,7 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
                         fontWeight: "600",
                       }}
                     >
-                      {val} Days
+                      {label}
                     </Text>
                   </Pressable>
                 );
@@ -399,6 +402,7 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
                 const selected = detail === val;
                 const isFirst = idx === 0;
                 const isLast = idx === arr.length - 1;
+                const label = val === "normal" ? "Quick Glance" : "Deep Dive";
 
                 return (
                   <Pressable
@@ -433,7 +437,7 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
                         fontWeight: "600",
                       }}
                     >
-                      {val === "normal" ? "Normal" : "Detailed"}
+                      {label}
                     </Text>
                   </Pressable>
                 );
