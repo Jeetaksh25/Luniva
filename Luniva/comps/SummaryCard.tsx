@@ -51,6 +51,48 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
   const adsLeftRef = useRef(0);
   const isAdChainRunning = useRef(false);
 
+  useEffect(() => {
+    const loadSummary = async () => {
+      try {
+        const stored = await AsyncStorage.getItem(SUMMARY_STORAGE_KEY);
+        if (!stored) return;
+
+        const parsed = JSON.parse(stored);
+        const today = new Date();
+        const storedDate = new Date(parsed.date);
+
+        // check if summary is from today
+        const isToday =
+          storedDate.getDate() === today.getDate() &&
+          storedDate.getMonth() === today.getMonth() &&
+          storedDate.getFullYear() === today.getFullYear();
+
+        if (!isToday) return; // old summary, ignore
+
+        // check for new chats since last summary
+        const latestChat = chats
+          .map((c) => new Date(c.date))
+          .sort((a, b) => b.getTime() - a.getTime())[0];
+
+        if (
+          latestChat &&
+          new Date(latestChat) > new Date(parsed.lastChatTime)
+        ) {
+          // new chats came after summary → reset
+          return;
+        }
+
+        // restore summary
+        setSummary(parsed.text);
+        setUnlocked(true);
+      } catch (err) {
+        console.error("Error loading saved summary", err);
+      }
+    };
+
+    loadSummary();
+  }, [chats]);
+
   // Number of ads to chain based on selection
   const getAdCount = (days: 7 | 30, detail: "normal" | "detailed") => {
     if (days === 7 && detail === "normal") return 3;
@@ -150,12 +192,12 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
       const today = new Date();
       const startDate = new Date();
       startDate.setDate(today.getDate() - summaryDays);
-  
+
       const validChats = chats.filter((c) => {
         const chatDate = new Date(c.date);
         return c.chatId && chatDate >= startDate && chatDate <= today;
       });
-  
+
       const chatTexts = await Promise.all(
         validChats.map(async (c) => {
           const msgsCol = collection(
@@ -176,9 +218,9 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
             .join("\n");
         })
       );
-  
+
       const chatText = chatTexts.join("\n");
-  
+
       if (!chatText) {
         setSummary("No chat history found.");
         await AsyncStorage.setItem(
@@ -192,7 +234,7 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
         );
         return;
       }
-  
+
       // ⬇️ Separate prompts to make it strict
       let prompt = "";
       if (summaryDetail === "normal") {
@@ -212,7 +254,7 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
   Conversation:
   ${chatText}`;
       }
-  
+
       const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -220,17 +262,17 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
           contents: [{ parts: [{ text: prompt }] }],
         }),
       });
-  
+
       const data = await response.json();
       if (!response.ok) throw new Error(data.error?.message || "AI API Error");
-  
+
       const aiText =
         data.candidates?.[0]?.content?.parts?.[0]?.text ||
         data.summary ||
         "No summary generated.";
-  
+
       setSummary(aiText);
-  
+
       await AsyncStorage.setItem(
         SUMMARY_STORAGE_KEY,
         JSON.stringify({
@@ -238,6 +280,9 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
           text: aiText,
           days: summaryDays,
           detail: summaryDetail,
+          lastChatTime: validChats.length
+            ? validChats[validChats.length - 1].date
+            : today,
         })
       );
     } catch (err) {
@@ -247,7 +292,13 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
       setLoadingSummary(false);
     }
   };
-  
+
+  const resetSummary = async () => {
+    await AsyncStorage.removeItem(SUMMARY_STORAGE_KEY);
+    setSummary(null);
+    setUnlocked(false);
+  };
+
   return (
     <LinearGradient
       colors={["#FF6F61", "#6A4C93"]}
@@ -395,14 +446,20 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
           loadingSummary ? (
             <ActivityIndicator size="small" color={themeColors.primaryText} />
           ) : (
-            <Text
-              style={{
-                fontSize: theme.fontSize.lg,
-                color: themeColors.primaryText,
-              }}
-            >
-              {summary}
-            </Text>
+            <>
+              <Text
+                style={{
+                  fontSize: theme.fontSize.lg,
+                  color: themeColors.primaryText,
+                }}
+              >
+                {summary}
+              </Text>
+              <CustomButton
+                title="Generate New Summary"
+                handlePress={resetSummary}
+              />
+            </>
           )
         ) : (
           <>
