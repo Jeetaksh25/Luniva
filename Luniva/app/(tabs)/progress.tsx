@@ -278,7 +278,7 @@ const Progress = () => {
 
         <View>
           <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
-            Generate Summary
+            Journey Recap
           </Text>
           <SummaryCard chats={chats} />
         </View>

@@ -325,12 +325,12 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
           style={{
             fontSize: 18,
             fontWeight: "bold",
-            marginBottom: 8,
+            marginBottom: theme.margin.lg,
             color: themeColors.primaryText,
             textAlign: "center",
           }}
         >
-          AI Chat Summary
+          AI-Powered Reflection
         </Text>
 
         {!unlocked && (
