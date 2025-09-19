@@ -6,6 +6,7 @@ import {
   Alert,
   ActivityIndicator,
   Platform,
+  Pressable,
 } from "react-native";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
@@ -18,6 +19,12 @@ import Constants from "expo-constants";
 import { collection, query, orderBy, getDocs } from "firebase/firestore";
 import { db } from "../firebase/config";
 import { useStore } from "@/store/useAppStore";
+import { theme } from "@/theme/theme";
+import { useModeColor } from "@/theme/modeColor";
+import { darkenColor } from "@/functions/darkenColor";
+import { LinearGradient } from "expo-linear-gradient";
+import CustomButton from "./CustomButton";
+import * as Haptics from "expo-haptics";
 
 const API_KEY_GEMINI = Constants.expoConfig?.extra?.eas?.API_KEY_GEMINI;
 const SUMMARY_STORAGE_KEY = "daily_summary";
@@ -27,6 +34,8 @@ const adUnitId = __DEV__
 const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${API_KEY_GEMINI}`;
 
 export default function SummaryCard({ chats }: { chats: any[] }) {
+  const themeColors = useModeColor();
+
   const [loadingAd, setLoadingAd] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
   const [summary, setSummary] = useState<string | null>(null);
@@ -44,70 +53,73 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
 
   // Number of ads to chain based on selection
   const getAdCount = (days: 7 | 30, detail: "normal" | "detailed") => {
-    if (days === 7 && detail === "normal") return 3; // ~15s
-    if (days === 7 && detail === "detailed") return 6; // ~30s
-    if (days === 30 && detail === "normal") return 6; // ~30s
-    if (days === 30 && detail === "detailed") return 12; // ~60s
+    if (days === 7 && detail === "normal") return 3;
+    if (days === 7 && detail === "detailed") return 6;
+    if (days === 30 && detail === "normal") return 6;
+    if (days === 30 && detail === "detailed") return 12;
     return 3;
   };
 
-  const showNextAd = useCallback(() => {
-    if (adsLeftRef.current <= 0) {
-      // All ads completed
-      setUnlocked(true);
-      setUnlocked(true);
-      generateAISummary(days, detail);
-      setLoadingAd(false);
-      isAdChainRunning.current = false;
-      return;
-    }
-
-    // Create a new ad instance
-    const ad = RewardedAd.createForAdRequest(adUnitId, {
-      requestNonPersonalizedAdsOnly: true,
-    });
-
-    const unsubLoaded = ad.addAdEventListener(
-      RewardedAdEventType.LOADED,
-      () => {
-        console.log("Ad loaded, showing now");
-        ad.show();
+  const showNextAd = useCallback(
+    (summaryDays: 7 | 30, summaryDetail: "normal" | "detailed") => {
+      if (adsLeftRef.current <= 0) {
+        // All ads completed
+        setUnlocked(true);
+        setUnlocked(true);
+        generateAISummary(summaryDays, summaryDetail);
+        setLoadingAd(false);
+        isAdChainRunning.current = false;
+        return;
       }
-    );
 
-    const unsubEarned = ad.addAdEventListener(
-      RewardedAdEventType.EARNED_REWARD,
-      () => {
-        console.log("Ad reward earned");
-        // Remove listeners for this ad
+      // Create a new ad instance
+      const ad = RewardedAd.createForAdRequest(adUnitId, {
+        requestNonPersonalizedAdsOnly: true,
+      });
+
+      const unsubLoaded = ad.addAdEventListener(
+        RewardedAdEventType.LOADED,
+        () => {
+          console.log("Ad loaded, showing now");
+          ad.show();
+        }
+      );
+
+      const unsubEarned = ad.addAdEventListener(
+        RewardedAdEventType.EARNED_REWARD,
+        () => {
+          console.log("Ad reward earned");
+          // Remove listeners for this ad
+          unsubLoaded();
+          unsubEarned();
+          unsubError();
+
+          // Update state and show next ad
+          adsLeftRef.current = adsLeftRef.current - 1;
+          setAdsLeft(adsLeftRef.current);
+          setCurrentAdNumber((prev) => prev + 1);
+          showNextAd(summaryDays, summaryDetail);
+        }
+      );
+
+      const unsubError = ad.addAdEventListener(AdEventType.ERROR, (err) => {
+        console.error("Ad error:", err);
+        // Remove listeners
         unsubLoaded();
         unsubEarned();
         unsubError();
 
-        // Update state and show next ad
-        adsLeftRef.current = adsLeftRef.current - 1;
-        setAdsLeft(adsLeftRef.current);
-        setCurrentAdNumber((prev) => prev + 1);
-        showNextAd();
-      }
-    );
+        Alert.alert("Error", "Failed to load ad. Try again later.");
+        setLoadingAd(false);
+        setAdsLeft(0);
+        isAdChainRunning.current = false;
+      });
 
-    const unsubError = ad.addAdEventListener(AdEventType.ERROR, (err) => {
-      console.error("Ad error:", err);
-      // Remove listeners
-      unsubLoaded();
-      unsubEarned();
-      unsubError();
-
-      Alert.alert("Error", "Failed to load ad. Try again later.");
-      setLoadingAd(false);
-      setAdsLeft(0);
-      isAdChainRunning.current = false;
-    });
-
-    // Load the ad
-    ad.load();
-  }, []);
+      // Load the ad
+      ad.load();
+    },
+    [days, detail]
+  );
 
   const handleUnlock = () => {
     if (Platform.OS === "web") {
@@ -126,7 +138,7 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
     isAdChainRunning.current = true;
 
     // Start the ad chain
-    showNextAd();
+    showNextAd(days, detail);
   };
 
   const generateAISummary = async (
@@ -138,12 +150,12 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
       const today = new Date();
       const startDate = new Date();
       startDate.setDate(today.getDate() - summaryDays);
-
+  
       const validChats = chats.filter((c) => {
         const chatDate = new Date(c.date);
         return c.chatId && chatDate >= startDate && chatDate <= today;
       });
-
+  
       const chatTexts = await Promise.all(
         validChats.map(async (c) => {
           const msgsCol = collection(
@@ -164,9 +176,9 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
             .join("\n");
         })
       );
-
+  
       const chatText = chatTexts.join("\n");
-
+  
       if (!chatText) {
         setSummary("No chat history found.");
         await AsyncStorage.setItem(
@@ -180,18 +192,27 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
         );
         return;
       }
-
-      const prompt = `You are an expert mental health assistant. Summarize the following chat conversation for the last ${summaryDays} days to promote well-being. Write in a professional, empathetic tone.
-
-      ${
-        summaryDetail === "normal"
-          ? "Write a short summary in 2-3 sentences highlighting key emotional insights."
-          : "Write a very very detailed, multi-paragraph analysis. Include emotional trends, coping strategies, recommendations, examples from the conversation, and actionable guidance. Each paragraph should be at least 4-5 sentences. Ensure the output is at least 600 words."
+  
+      // ⬇️ Separate prompts to make it strict
+      let prompt = "";
+      if (summaryDetail === "normal") {
+        prompt = `Summarize the following chat conversation from the last ${summaryDays} days. 
+  Keep it very short (2–3 sentences, maximum 100 words). 
+  Highlight only the most important emotional insights. 
+  Do not include extra detail or multiple paragraphs.
+  
+  Conversation:
+  ${chatText}`;
+      } else {
+        prompt = `Provide a very detailed, professional analysis of the following chat conversation from the last ${summaryDays} days. 
+  Write at least 600 words across multiple paragraphs. 
+  Include emotional patterns, coping strategies, recommendations, and examples from the chats. 
+  Make it empathetic, actionable, and professional.
+  
+  Conversation:
+  ${chatText}`;
       }
-      
-      Conversation:
-      ${chatText}`;
-
+  
       const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -199,19 +220,17 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
           contents: [{ parts: [{ text: prompt }] }],
         }),
       });
-
+  
       const data = await response.json();
       if (!response.ok) throw new Error(data.error?.message || "AI API Error");
-
+  
       const aiText =
         data.candidates?.[0]?.content?.parts?.[0]?.text ||
         data.summary ||
         "No summary generated.";
-
-      console.log("AI API Response:", JSON.stringify(data, null, 2));
-
+  
       setSummary(aiText);
-
+  
       await AsyncStorage.setItem(
         SUMMARY_STORAGE_KEY,
         JSON.stringify({
@@ -228,82 +247,203 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
       setLoadingSummary(false);
     }
   };
-
+  
   return (
-    <View
+    <LinearGradient
+      colors={["#FF6F61", "#6A4C93"]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 0 }}
       style={{
-        margin: 16,
-        padding: 16,
-        borderRadius: 12,
-        backgroundColor: "#f5f5f5",
+        padding: theme.padding.md,
+        borderRadius: theme.borderRadius.lg,
         elevation: 2,
+        alignItems: "center",
+        justifyContent: "center",
+        alignContent: "center",
       }}
     >
-      <Text style={{ fontSize: 18, fontWeight: "bold", marginBottom: 8 }}>
-        AI Chat Summary
-      </Text>
+      <View
+        style={{
+          padding: theme.padding.md,
+          borderRadius: theme.borderRadius.md,
+          elevation: 2,
+          backgroundColor: darkenColor(themeColors.background, 10),
+        }}
+      >
+        <Text
+          style={{
+            fontSize: 18,
+            fontWeight: "bold",
+            marginBottom: 8,
+            color: themeColors.primaryText,
+          }}
+        >
+          AI Chat Summary
+        </Text>
 
-      {!unlocked && (
-        <View style={{ marginBottom: 12 }}>
-          <Text style={{ marginBottom: 4 }}>Choose time period:</Text>
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <Button
-              title="7 Days"
-              onPress={() => setDays(7)}
-              disabled={loadingAd}
-            />
-            <Button
-              title="30 Days"
-              onPress={() => setDays(30)}
-              disabled={loadingAd}
-            />
-          </View>
-          <Text style={{ marginTop: 8, marginBottom: 4 }}>
-            Choose summary type:
-          </Text>
-          <View style={{ flexDirection: "row", gap: 8 }}>
-            <Button
-              title="Normal"
-              onPress={() => setDetail("normal")}
-              disabled={loadingAd}
-            />
-            <Button
-              title="Detailed"
-              onPress={() => setDetail("detailed")}
-              disabled={loadingAd}
-            />
-          </View>
-        </View>
-      )}
+        {!unlocked && (
+          <View style={{ marginBottom: 12 }}>
+            <Text style={{ marginBottom: 4, color: themeColors.primaryText }}>
+              Choose time period:
+            </Text>
 
-      {unlocked ? (
-        loadingSummary ? (
-          <ActivityIndicator size="small" color="#000" />
-        ) : (
-          <Text style={{ fontSize: 14, color: "#333" }}>{summary}</Text>
-        )
-      ) : (
-        <>
-          <Text style={{ fontSize: 14, color: "#666", marginBottom: 12 }}>
-            Watch {getAdCount(days, detail)} ads ({days} days • {detail}) to
-            unlock today's summary.
-            {adsLeft > 0 && ` (${adsLeft} ads remaining)`}
-          </Text>
-          {loadingAd ? (
-            <View style={{ alignItems: "center" }}>
-              <ActivityIndicator size="small" color="#000" />
-              <Text style={{ marginTop: 8, fontSize: 12 }}>
-                Watching ad {currentAdNumber} of {totalAdsRef.current}
-              </Text>
+            <View style={{ flexDirection: "row" }}>
+              {[7, 30].map((val, idx, arr) => {
+                const selected = days === val;
+                const isFirst = idx === 0;
+                const isLast = idx === arr.length - 1;
+
+                return (
+                  <Pressable
+                    key={val}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      if (!loadingAd) setDays(val as 7 | 30);
+                    }}
+                    style={{
+                      flex: 1,
+                      backgroundColor: selected
+                        ? theme.colors.primaryColor
+                        : darkenColor(themeColors.background, 0),
+                      paddingVertical: theme.padding.md,
+                      alignItems: "center",
+
+                      borderTopLeftRadius: isFirst ? theme.borderRadius.md : 0,
+                      borderBottomLeftRadius: isFirst
+                        ? theme.borderRadius.md
+                        : 0,
+                      borderTopRightRadius: isLast ? theme.borderRadius.md : 0,
+                      borderBottomRightRadius: isLast
+                        ? theme.borderRadius.md
+                        : 0,
+
+                      marginLeft: isFirst ? 0 : 1,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: selected ? "#fff" : themeColors.secondaryText,
+                        fontWeight: "600",
+                      }}
+                    >
+                      {val} Days
+                    </Text>
+                  </Pressable>
+                );
+              })}
             </View>
+
+            <Text
+              style={{
+                marginTop: 8,
+                marginBottom: 4,
+                color: themeColors.primaryText,
+              }}
+            >
+              Choose summary type:
+            </Text>
+
+            <View style={{ flexDirection: "row" }}>
+              {["normal", "detailed"].map((val, idx, arr) => {
+                const selected = detail === val;
+                const isFirst = idx === 0;
+                const isLast = idx === arr.length - 1;
+
+                return (
+                  <Pressable
+                    key={val}
+                    onPress={() => {
+                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+                      if (!loadingAd) setDetail(val as "normal" | "detailed");
+                    }}
+                    style={{
+                      flex: 1,
+                      backgroundColor: selected
+                        ? theme.colors.primaryColor
+                        : darkenColor(themeColors.background, 0),
+                      paddingVertical: theme.padding.md,
+                      alignItems: "center",
+
+                      borderTopLeftRadius: isFirst ? theme.borderRadius.md : 0,
+                      borderBottomLeftRadius: isFirst
+                        ? theme.borderRadius.md
+                        : 0,
+                      borderTopRightRadius: isLast ? theme.borderRadius.md : 0,
+                      borderBottomRightRadius: isLast
+                        ? theme.borderRadius.md
+                        : 0,
+
+                      marginLeft: isFirst ? 0 : 1,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: selected ? "#fff" : themeColors.primaryText,
+                        fontWeight: "600",
+                      }}
+                    >
+                      {val === "normal" ? "Normal" : "Detailed"}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        )}
+
+        {unlocked ? (
+          loadingSummary ? (
+            <ActivityIndicator size="small" color={themeColors.primaryText} />
           ) : (
-            <Button
-              title={`Unlock with ${getAdCount(days, detail)} Ads`}
-              onPress={handleUnlock}
-            />
-          )}
-        </>
-      )}
-    </View>
+            <Text
+              style={{
+                fontSize: theme.fontSize.lg,
+                color: themeColors.primaryText,
+              }}
+            >
+              {summary}
+            </Text>
+          )
+        ) : (
+          <>
+            <Text
+              style={{
+                fontSize: 14,
+                marginBottom: 12,
+                color: themeColors.primaryText,
+              }}
+            >
+              Watch {getAdCount(days, detail)} ads ({days} days • {detail}) to
+              unlock today's summary.
+              {adsLeft > 0 && ` (${adsLeft} ads remaining)`}
+            </Text>
+            {loadingAd ? (
+              <View style={{ alignItems: "center" }}>
+                <ActivityIndicator
+                  size="small"
+                  color={themeColors.primaryText}
+                />
+                <Text
+                  style={{
+                    marginTop: 8,
+                    fontSize: 12,
+                    color: themeColors.primaryText,
+                  }}
+                >
+                  Watching ad {currentAdNumber} of {totalAdsRef.current}
+                </Text>
+              </View>
+            ) : (
+              <CustomButton
+                title={`Unlock with ${getAdCount(days, detail)} Ads`}
+                handlePress={handleUnlock}
+                loadingText="Loading Ads"
+                isLoading={loadingAd}
+              />
+            )}
+          </>
+        )}
+      </View>
+    </LinearGradient>
   );
 }
