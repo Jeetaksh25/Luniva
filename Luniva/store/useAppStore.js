@@ -247,13 +247,10 @@ export const useStore = create((set, get) => ({
       console.log("AI Response:", aiText);
 
       // Reload chats for today
-      await get().loadDailyChats(
-        new Date().getMonth(),
-        new Date().getFullYear()
-      );
-
       // Save AI message
       await sendAIResponse(aiText);
+
+      set({ isAiTyping: false });
 
       await get().updateUserStats();
     } catch (err) {
@@ -263,8 +260,6 @@ export const useStore = create((set, get) => ({
         chatId,
         "Sorry, I encountered an error. Please try again."
       );
-    } finally {
-      set({ isAiTyping: false });
     }
   },
 

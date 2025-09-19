@@ -19,7 +19,6 @@ import { Svg, Path, Circle } from "react-native-svg";
 import { getStreakPercentage } from "@/utils/StreakPercentage";
 import { LinearGradient } from "expo-linear-gradient";
 import SummaryCard from "@/comps/SummaryCard";
-import { InteractionManager } from "react-native";
 import CustomButton from "@/comps/CustomButton";
 
 const windowHeight = Dimensions.get("window").height;
@@ -72,8 +71,10 @@ const Progress = () => {
   };
 
   return (
-    <View style={[styles.safe, { backgroundColor: themeColors.background }]}>
-      <ScrollView ref={scrollRef}>
+    <SafeAreaView
+      style={[styles.safe, { backgroundColor: themeColors.background }]}
+    >
+      <ScrollView ref={scrollRef} contentContainerStyle={styles.container}>
         <Text style={[styles.PageTitle, { color: themeColors.text }]}>
           Your Journey
         </Text>
@@ -275,10 +276,12 @@ const Progress = () => {
           </LinearGradient>
         </View>
 
-        <CustomButton
-          title="View Summary"
-          handlePress={handleScrollToSummary}
-        />
+        <View>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+            Generate Summary
+          </Text>
+          <SummaryCard chats={chats} />
+        </View>
 
         <View>
           <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
@@ -341,18 +344,20 @@ const Progress = () => {
             </View>
           </View>
         </View>
-        <View ref={summaryRef}>
-          <SummaryCard chats={chats} />
-        </View>
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 };
 
 export default Progress;
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, padding: 20, paddingBottom: 40, gap: 30 },
+  safe: { flex: 1 },
+  container: {
+    padding: 20,
+    paddingBottom: 40,
+    gap: 30,
+  },
   sectionTitle: {
     fontSize: theme.fontSize.lg,
     fontWeight: "700",
@@ -367,12 +372,13 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: "row",
     flexWrap: "wrap",
-    justifyContent: "space-between",
     width: "100%",
+    justifyContent: "space-between",
   },
+
   statsItem: {
-    flexBasis: "32%",
-    marginBottom: 10,
+    width: "30%",
+    padding: 6,
     alignItems: "center",
   },
   card: {
@@ -443,5 +449,4 @@ const styles = StyleSheet.create({
     borderRadius: theme.borderRadius.md,
     alignItems: "center",
   },
-  scrollBtnText: { color: "white", fontWeight: "700" },
 });

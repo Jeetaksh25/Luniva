@@ -12,6 +12,7 @@ import {
   Dimensions,
   BackHandler,
   Image,
+  ScrollView,
 } from "react-native";
 import MessageInput from "@/comps/MessageInput";
 import { useColorScheme } from "react-native";
@@ -40,7 +41,6 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { Audio } from "expo-av";
-import { ScrollView } from "react-native-gesture-handler";
 
 const { width } = Dimensions.get("window");
 const SWIPE_THRESHOLD = 50;
@@ -526,7 +526,7 @@ const Chat = () => {
               )}
             </Animated.View>
           )}
-          <ScrollView style={{ flex: 1 }}>
+          <View style={{ flex: 1 }}>
             {messages.length === 0 ? (
               <EmptyChat
                 onStartChat={async () => {
@@ -571,12 +571,15 @@ const Chat = () => {
                     </Text>
                   ) : null
                 }
-                maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+                maintainVisibleContentPosition={{
+                  minIndexForVisible: 1,
+                }}
                 onScrollToIndexFailed={handleScrollToIndexFailed}
-                removeClippedSubviews={false}
+                onRefresh={handleLoadOlder}
+                refreshing={loadingOlder}
               />
             )}
-          </ScrollView>
+          </View>
 
           {isCreatingChat && (
             <View style={styles.creatingChatOverlay}>

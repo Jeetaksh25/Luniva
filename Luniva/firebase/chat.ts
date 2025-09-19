@@ -144,28 +144,38 @@ export async function sendAIMessage(uid: string, chatId: string, text: string, e
 }
 
 // Fix the watchMessages function to handle Firestore timestamps
-export function watchMessages(uid: string, chatId: string, callback: (messages: any[]) => void) {
+export function watchMessages(
+  uid: string,
+  chatId: string,
+  callback: (messages: any[]) => void
+) {
   const msgsCol = collection(db, "users", uid, "chats", chatId, "messages");
-  const q = query(msgsCol, orderBy("createdAt", "asc"),limitToLast(10));
-  
+  const q = query(msgsCol, orderBy("createdAt", "asc"), limitToLast(10));
+
   console.log("Setting up message listener for:", uid, chatId);
-  
-  return onSnapshot(q, 
+
+  let lastIds = "";
+
+  return onSnapshot(
+    q,
     (snap) => {
-      console.log("Messages snapshot received:", snap.docs.length, "messages");
       const msgs = snap.docs.map((d) => {
         const data = d.data();
         const createdAt = data.createdAt?.toDate
           ? data.createdAt.toDate()
-          : new Date(data.createdAt?.seconds * 1000) || new Date();
+          : data.createdAt?.seconds
+          ? new Date(data.createdAt.seconds * 1000)
+          : new Date();
 
-        return {
-          id: d.id,
-          ...data,
-          createdAt,
-        };
+        return { id: d.id, ...data, createdAt };
       });
-      callback(msgs);
+
+      // Only call if the set of IDs changed
+      const ids = msgs.map((m) => m.id).join(",");
+      if (ids !== lastIds) {
+        lastIds = ids;
+        callback(msgs);
+      }
     },
     (error) => {
       console.error("Error in message listener:", error);
