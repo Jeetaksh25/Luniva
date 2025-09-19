@@ -40,6 +40,7 @@ import Animated, {
 } from "react-native-reanimated";
 
 import { Audio } from "expo-av";
+import { ScrollView } from "react-native-gesture-handler";
 
 const { width } = Dimensions.get("window");
 const SWIPE_THRESHOLD = 50;
@@ -525,7 +526,7 @@ const Chat = () => {
               )}
             </Animated.View>
           )}
-          <View style={{ flex: 1 }}>
+          <ScrollView style={{ flex: 1 }}>
             {messages.length === 0 ? (
               <EmptyChat
                 onStartChat={async () => {
@@ -572,9 +573,10 @@ const Chat = () => {
                 }
                 maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
                 onScrollToIndexFailed={handleScrollToIndexFailed}
+                removeClippedSubviews={false}
               />
             )}
-          </View>
+          </ScrollView>
 
           {isCreatingChat && (
             <View style={styles.creatingChatOverlay}>

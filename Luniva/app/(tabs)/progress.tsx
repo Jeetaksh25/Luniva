@@ -7,6 +7,7 @@ import {
   Dimensions,
   TouchableOpacity,
   findNodeHandle,
+  Platform,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useStore } from "@/store/useAppStore";
@@ -20,6 +21,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import SummaryCard from "@/comps/SummaryCard";
 import { InteractionManager } from "react-native";
 import CustomButton from "@/comps/CustomButton";
+
+const windowHeight = Dimensions.get("window").height;
 
 const Progress = () => {
   const themeColors = useModeColor();
@@ -69,296 +72,287 @@ const Progress = () => {
   };
 
   return (
-    <SafeAreaView
-      style={[styles.safe, { backgroundColor: themeColors.background }]}
-    >
-      <View style={{ flex: 1 }}>
-        <ScrollView ref={scrollRef} contentContainerStyle={styles.container}>
-          <Text style={[styles.PageTitle, { color: themeColors.text }]}>
-            Your Journey
+    <View style={[styles.safe, { backgroundColor: themeColors.background }]}>
+      <ScrollView ref={scrollRef}>
+        <Text style={[styles.PageTitle, { color: themeColors.text }]}>
+          Your Journey
+        </Text>
+
+        <View>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+            Milestone Tracker
           </Text>
-
-          <View>
-            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
-              Milestone Tracker
-            </Text>
-            <LinearGradient
-              colors={["#FF6F61", "#6A4C93"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.card}
-            >
-              <View style={styles.pieRow}>
-                <View style={styles.pieDescription}>
-                  <Text
-                    style={[
-                      styles.pieTitle,
-                      { color: "white", fontWeight: "bold" },
-                    ]}
-                  >
-                    Streak Milestone
-                  </Text>
-                  <Text style={[styles.pieDetail, { color: "white" }]}>
-                    Track how consistent you've been.
-                  </Text>
-                  <Text style={[styles.pieDetail, { color: "white" }]}>
-                    Current Streak:{" "}
-                    <Text
-                      style={{
-                        fontWeight: "bold",
-                        color: theme.colors.warningColor,
-                        fontSize: theme.fontSize.md,
-                      }}
-                    >
-                      {user.dailyStreak}
-                    </Text>
-                  </Text>
-
-                  <Text
-                    style={[
-                      {
-                        color: "white",
-                        fontSize: 8,
-                        position: "absolute",
-                        bottom: -40,
-                      },
-                    ]}
-                  >
-                    This updates as your streak progress increases beyond the
-                    current milestone.
-                  </Text>
-                </View>
-
-                <View style={styles.pieContainer}>
-                  <Svg height="150" width="130" viewBox="0 0 100 100">
-                    <Circle
-                      cx="50"
-                      cy="50"
-                      r="45"
-                      stroke="#cccccc30"
-                      strokeWidth="10"
-                      fill="none"
-                    />
-                    <Circle
-                      cx="50"
-                      cy="50"
-                      r="45"
-                      stroke={theme.colors.successColor}
-                      strokeWidth="10"
-                      fill="none"
-                      strokeDasharray="282.6"
-                      strokeDashoffset={282.6 * (1 - progress.percentage / 100)}
-                      strokeLinecap="round"
-                      rotation="-85"
-                      origin="50,50"
-                    />
-                  </Svg>
-
-                  <View style={styles.pieCenter}>
-                    {progress.milestone > 0 ? (
-                      <>
-                        <Text style={[styles.pieText, { color: "white" }]}>
-                          {progress.percentage}%
-                        </Text>
-                        <Text style={[styles.pieSubText, { color: "white" }]}>
-                          {progress.milestone} days
-                        </Text>
-                      </>
-                    ) : (
-                      <>
-                        <Text style={[styles.pieText, { color: "white" }]}>
-                          0%
-                        </Text>
-                        <Text style={[styles.pieSubText, { color: "white" }]}>
-                          0 days
-                        </Text>
-                      </>
-                    )}
-                  </View>
-                </View>
-              </View>
-            </LinearGradient>
-          </View>
-
-          <View>
-            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
-              30-Day Pulse
-            </Text>
-            <LinearGradient
-              colors={["#FF6F61", "#6A4C93"]}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={styles.card}
-            >
-              <View
-                style={{
-                  height: 100,
-                  flexDirection: "row",
-                  alignItems: "flex-end",
-                }}
-              >
-                {/* Y-axis label */}
-                <View
-                  style={{
-                    width: axisLabelWidth,
-                    position: "absolute",
-                    left: 0,
-                  }}
+          <LinearGradient
+            colors={["#FF6F61", "#6A4C93"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.card}
+          >
+            <View style={styles.pieRow}>
+              <View style={styles.pieDescription}>
+                <Text
+                  style={[
+                    styles.pieTitle,
+                    { color: "white", fontWeight: "bold" },
+                  ]}
                 >
-                  <Text
-                    style={[
-                      styles.graphLabel,
-                      {
-                        color: "white",
-                        position: "absolute",
-                        top: -80,
-                        left: 0,
-                      },
-                    ]}
-                  >
-                    High
-                  </Text>
-                  <Text
-                    style={[
-                      styles.graphLabel,
-                      {
-                        color: "white",
-                        position: "absolute",
-                        bottom: 10,
-                        left: 0,
-                      },
-                    ]}
-                  >
-                    Low
-                  </Text>
-                </View>
-
-                <View style={{ flex: 1, overflow: "visible" }}>
-                  <Svg height="80" width={screenWidth}>
-                    <Path
-                      d={zigzagPath}
-                      stroke={theme.colors.infoColor}
-                      strokeWidth="3"
-                      fill="none"
-                    />
-                  </Svg>
-                </View>
-              </View>
-
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  marginTop: 10,
-                  width: "100%",
-                }}
-              >
-                <Text style={[styles.graphLabel, { color: "white" }]}>
-                  {startDate.toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  })}
+                  Streak Milestone
                 </Text>
-                <Text style={[styles.graphLabel, { color: "white" }]}>
-                  {endDate.toLocaleDateString("en-US", {
-                    month: "short",
-                    day: "numeric",
-                  })}{" "}
-                  (Today)
+                <Text style={[styles.pieDetail, { color: "white" }]}>
+                  Track how consistent you've been.
+                </Text>
+                <Text style={[styles.pieDetail, { color: "white" }]}>
+                  Current Streak:{" "}
+                  <Text
+                    style={{
+                      fontWeight: "bold",
+                      color: theme.colors.warningColor,
+                      fontSize: theme.fontSize.md,
+                    }}
+                  >
+                    {user.dailyStreak}
+                  </Text>
+                </Text>
+
+                <Text
+                  style={[
+                    {
+                      color: "white",
+                      fontSize: 8,
+                      position: "absolute",
+                      bottom: -40,
+                    },
+                  ]}
+                >
+                  This updates as your streak progress increases beyond the
+                  current milestone.
                 </Text>
               </View>
 
-              <Text style={styles.graphHint}>
-                <Text style={{ color: "white" }}> High = Done</Text>,
-                <Text style={{ color: "white" }}> Low = Missed</Text>{" "}
-              </Text>
-            </LinearGradient>
-          </View>
+              <View style={styles.pieContainer}>
+                <Svg height="150" width="130" viewBox="0 0 100 100">
+                  <Circle
+                    cx="50"
+                    cy="50"
+                    r="45"
+                    stroke="#cccccc30"
+                    strokeWidth="10"
+                    fill="none"
+                  />
+                  <Circle
+                    cx="50"
+                    cy="50"
+                    r="45"
+                    stroke={theme.colors.successColor}
+                    strokeWidth="10"
+                    fill="none"
+                    strokeDasharray="282.6"
+                    strokeDashoffset={282.6 * (1 - progress.percentage / 100)}
+                    strokeLinecap="round"
+                    rotation="-85"
+                    origin="50,50"
+                  />
+                </Svg>
 
-          <CustomButton
-            title="View Summary"
-            handlePress={handleScrollToSummary}
-          />
-
-          <View>
-            <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
-              Highlights
-            </Text>
-            <View style={styles.statsRow}>
-              <View style={styles.statsItem}>
-                <StatsBubble
-                  label="Current Streak"
-                  value={`${user.dailyStreak || 0}`}
-                />
-              </View>
-              <View style={styles.statsItem}>
-                <StatsBubble
-                  label="Highest Streak"
-                  value={`${userStats?.highestStreak || 0}`}
-                />
-              </View>
-              <View style={styles.statsItem}>
-                <StatsBubble
-                  label="Total Days Chatted"
-                  value={`${userStats?.totalDaysChatted || 0}`}
-                />
-              </View>
-              <View style={styles.statsItem}>
-                <StatsBubble
-                  label="Total Messages"
-                  value={`${userStats?.totalMessages || 0}`}
-                />
-              </View>
-              <View style={styles.statsItem}>
-                <StatsBubble
-                  label="Avg Msgs/Chat"
-                  value={`${userStats?.avgMessagesPerChat || 0}`}
-                />
-              </View>
-              <View style={styles.statsItem}>
-                <StatsBubble
-                  label="Consistency"
-                  value={`${userStats?.consistency || 0}%`}
-                />
-              </View>
-              <View style={styles.statsItem}>
-                <StatsBubble
-                  label="Avg Streak"
-                  value={`${userStats?.avgStreak || 0}`}
-                />
-              </View>
-              <View style={styles.statsItem}>
-                <StatsBubble
-                  label="Peak Msgs/Day"
-                  value={`${userStats?.peakMessages || 0}`}
-                />
-              </View>
-              <View style={styles.statsItem}>
-                <StatsBubble
-                  label="Chats This Month"
-                  value={`${userStats?.chattingDaysThisMonth || 0}`}
-                />
+                <View style={styles.pieCenter}>
+                  {progress.milestone > 0 ? (
+                    <>
+                      <Text style={[styles.pieText, { color: "white" }]}>
+                        {progress.percentage}%
+                      </Text>
+                      <Text style={[styles.pieSubText, { color: "white" }]}>
+                        {progress.milestone} days
+                      </Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={[styles.pieText, { color: "white" }]}>
+                        0%
+                      </Text>
+                      <Text style={[styles.pieSubText, { color: "white" }]}>
+                        0 days
+                      </Text>
+                    </>
+                  )}
+                </View>
               </View>
             </View>
+          </LinearGradient>
+        </View>
+
+        <View>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+            30-Day Pulse
+          </Text>
+          <LinearGradient
+            colors={["#FF6F61", "#6A4C93"]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.card}
+          >
+            <View
+              style={{
+                height: 100,
+                flexDirection: "row",
+                alignItems: "flex-end",
+              }}
+            >
+              {/* Y-axis label */}
+              <View
+                style={{
+                  width: axisLabelWidth,
+                  position: "absolute",
+                  left: 0,
+                }}
+              >
+                <Text
+                  style={[
+                    styles.graphLabel,
+                    {
+                      color: "white",
+                      position: "absolute",
+                      top: -80,
+                      left: 0,
+                    },
+                  ]}
+                >
+                  High
+                </Text>
+                <Text
+                  style={[
+                    styles.graphLabel,
+                    {
+                      color: "white",
+                      position: "absolute",
+                      bottom: 10,
+                      left: 0,
+                    },
+                  ]}
+                >
+                  Low
+                </Text>
+              </View>
+
+              <View style={{ flex: 1, overflow: "visible" }}>
+                <Svg height="80" width={screenWidth}>
+                  <Path
+                    d={zigzagPath}
+                    stroke={theme.colors.infoColor}
+                    strokeWidth="3"
+                    fill="none"
+                  />
+                </Svg>
+              </View>
+            </View>
+
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                marginTop: 10,
+                width: "100%",
+              }}
+            >
+              <Text style={[styles.graphLabel, { color: "white" }]}>
+                {startDate.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}
+              </Text>
+              <Text style={[styles.graphLabel, { color: "white" }]}>
+                {endDate.toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}{" "}
+                (Today)
+              </Text>
+            </View>
+
+            <Text style={styles.graphHint}>
+              <Text style={{ color: "white" }}> High = Done</Text>,
+              <Text style={{ color: "white" }}> Low = Missed</Text>{" "}
+            </Text>
+          </LinearGradient>
+        </View>
+
+        <CustomButton
+          title="View Summary"
+          handlePress={handleScrollToSummary}
+        />
+
+        <View>
+          <Text style={[styles.sectionTitle, { color: themeColors.text }]}>
+            Highlights
+          </Text>
+          <View style={styles.statsRow}>
+            <View style={styles.statsItem}>
+              <StatsBubble
+                label="Current Streak"
+                value={`${user.dailyStreak || 0}`}
+              />
+            </View>
+            <View style={styles.statsItem}>
+              <StatsBubble
+                label="Highest Streak"
+                value={`${userStats?.highestStreak || 0}`}
+              />
+            </View>
+            <View style={styles.statsItem}>
+              <StatsBubble
+                label="Total Days Chatted"
+                value={`${userStats?.totalDaysChatted || 0}`}
+              />
+            </View>
+            <View style={styles.statsItem}>
+              <StatsBubble
+                label="Total Messages"
+                value={`${userStats?.totalMessages || 0}`}
+              />
+            </View>
+            <View style={styles.statsItem}>
+              <StatsBubble
+                label="Avg Msgs/Chat"
+                value={`${userStats?.avgMessagesPerChat || 0}`}
+              />
+            </View>
+            <View style={styles.statsItem}>
+              <StatsBubble
+                label="Consistency"
+                value={`${userStats?.consistency || 0}%`}
+              />
+            </View>
+            <View style={styles.statsItem}>
+              <StatsBubble
+                label="Avg Streak"
+                value={`${userStats?.avgStreak || 0}`}
+              />
+            </View>
+            <View style={styles.statsItem}>
+              <StatsBubble
+                label="Peak Msgs/Day"
+                value={`${userStats?.peakMessages || 0}`}
+              />
+            </View>
+            <View style={styles.statsItem}>
+              <StatsBubble
+                label="Chats This Month"
+                value={`${userStats?.chattingDaysThisMonth || 0}`}
+              />
+            </View>
           </View>
-          <View ref={summaryRef}>
-            <SummaryCard chats={chats} />
-          </View>
-        </ScrollView>
-      </View>
-    </SafeAreaView>
+        </View>
+        <View ref={summaryRef}>
+          <SummaryCard chats={chats} />
+        </View>
+      </ScrollView>
+    </View>
   );
 };
 
 export default Progress;
 
 const styles = StyleSheet.create({
-  safe: { flex: 1 },
-  container: {
-    padding: 20,
-    paddingBottom: 40,
-    gap: 30,
-  },
+  safe: { flex: 1, padding: 20, paddingBottom: 40, gap: 30 },
   sectionTitle: {
     fontSize: theme.fontSize.lg,
     fontWeight: "700",
