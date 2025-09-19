@@ -45,7 +45,7 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
   // Number of ads to chain based on selection
   const getAdCount = (days: 7 | 30, detail: "normal" | "detailed") => {
     if (days === 7 && detail === "normal") return 3; // ~15s
-    if (days === 7 && detail === "detailed") return 2; // ~30s
+    if (days === 7 && detail === "detailed") return 6; // ~30s
     if (days === 30 && detail === "normal") return 6; // ~30s
     if (days === 30 && detail === "detailed") return 12; // ~60s
     return 3;
