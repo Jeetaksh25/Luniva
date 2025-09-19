@@ -150,7 +150,7 @@ export function watchMessages(
   callback: (messages: any[]) => void
 ) {
   const msgsCol = collection(db, "users", uid, "chats", chatId, "messages");
-  const q = query(msgsCol, orderBy("createdAt", "asc"), limitToLast(10));
+  const q = query(msgsCol, orderBy("createdAt", "asc"));
 
   console.log("Setting up message listener for:", uid, chatId);
 
