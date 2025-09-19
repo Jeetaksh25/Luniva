@@ -45,7 +45,7 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
   // Number of ads to chain based on selection
   const getAdCount = (days: 7 | 30, detail: "normal" | "detailed") => {
     if (days === 7 && detail === "normal") return 3; // ~15s
-    if (days === 7 && detail === "detailed") return 6; // ~30s
+    if (days === 7 && detail === "detailed") return 2; // ~30s
     if (days === 30 && detail === "normal") return 6; // ~30s
     if (days === 30 && detail === "detailed") return 12; // ~60s
     return 3;
@@ -55,7 +55,8 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
     if (adsLeftRef.current <= 0) {
       // All ads completed
       setUnlocked(true);
-      generateAISummary();
+      setUnlocked(true);
+      generateAISummary(days, detail);
       setLoadingAd(false);
       isAdChainRunning.current = false;
       return;
@@ -66,10 +67,13 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
       requestNonPersonalizedAdsOnly: true,
     });
 
-    const unsubLoaded = ad.addAdEventListener(RewardedAdEventType.LOADED, () => {
-      console.log("Ad loaded, showing now");
-      ad.show();
-    });
+    const unsubLoaded = ad.addAdEventListener(
+      RewardedAdEventType.LOADED,
+      () => {
+        console.log("Ad loaded, showing now");
+        ad.show();
+      }
+    );
 
     const unsubEarned = ad.addAdEventListener(
       RewardedAdEventType.EARNED_REWARD,
@@ -79,11 +83,11 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
         unsubLoaded();
         unsubEarned();
         unsubError();
-        
+
         // Update state and show next ad
         adsLeftRef.current = adsLeftRef.current - 1;
         setAdsLeft(adsLeftRef.current);
-        setCurrentAdNumber(prev => prev + 1);
+        setCurrentAdNumber((prev) => prev + 1);
         showNextAd();
       }
     );
@@ -94,7 +98,7 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
       unsubLoaded();
       unsubEarned();
       unsubError();
-      
+
       Alert.alert("Error", "Failed to load ad. Try again later.");
       setLoadingAd(false);
       setAdsLeft(0);
@@ -120,17 +124,20 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
     setCurrentAdNumber(1);
     setLoadingAd(true);
     isAdChainRunning.current = true;
-    
+
     // Start the ad chain
     showNextAd();
   };
 
-  const generateAISummary = async () => {
+  const generateAISummary = async (
+    summaryDays: 7 | 30,
+    summaryDetail: "normal" | "detailed"
+  ) => {
     setLoadingSummary(true);
     try {
       const today = new Date();
       const startDate = new Date();
-      startDate.setDate(today.getDate() - days);
+      startDate.setDate(today.getDate() - summaryDays);
 
       const validChats = chats.filter((c) => {
         const chatDate = new Date(c.date);
@@ -167,33 +174,52 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
           JSON.stringify({
             date: today,
             text: "No chat history found.",
-            days,
-            detail,
+            days: summaryDays,
+            detail: summaryDetail,
           })
         );
         return;
       }
 
-      const prompt = `You are an expert mental health assistant. Summarize the following chat conversation for the last ${days} days to promote well-being. Write in a professional, empathetic tone. The summary should ${detail === "normal" ? "2-3 sentences with key emotional insights" : "a detailed multi-paragraph analysis with emotional trends, coping suggestions, and recommendations"}:\n\n${chatText}`;
+      const prompt = `You are an expert mental health assistant. Summarize the following chat conversation for the last ${summaryDays} days to promote well-being. Write in a professional, empathetic tone.
+
+      ${
+        summaryDetail === "normal"
+          ? "Write a short summary in 2-3 sentences highlighting key emotional insights."
+          : "Write a detailed, multi-paragraph analysis. Include emotional trends, coping strategies, recommendations, examples from the conversation, and actionable guidance. Each paragraph should be at least 4-5 sentences. Ensure the output is at least 400 words."
+      }
+      
+      Conversation:
+      ${chatText}`;
 
       const response = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: prompt }] }],
+        }),
       });
 
       const data = await response.json();
       if (!response.ok) throw new Error(data.error?.message || "AI API Error");
 
       const aiText =
-        data.summary ||
         data.candidates?.[0]?.content?.parts?.[0]?.text ||
+        data.summary ||
         "No summary generated.";
+
+      console.log("AI API Response:", JSON.stringify(data, null, 2));
+
       setSummary(aiText);
 
       await AsyncStorage.setItem(
         SUMMARY_STORAGE_KEY,
-        JSON.stringify({ date: today, text: aiText, days, detail })
+        JSON.stringify({
+          date: today,
+          text: aiText,
+          days: summaryDays,
+          detail: summaryDetail,
+        })
       );
     } catch (err) {
       console.error("AI Summary Error:", err);
@@ -221,14 +247,14 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
         <View style={{ marginBottom: 12 }}>
           <Text style={{ marginBottom: 4 }}>Choose time period:</Text>
           <View style={{ flexDirection: "row", gap: 8 }}>
-            <Button 
-              title="7 Days" 
-              onPress={() => setDays(7)} 
+            <Button
+              title="7 Days"
+              onPress={() => setDays(7)}
               disabled={loadingAd}
             />
-            <Button 
-              title="30 Days" 
-              onPress={() => setDays(30)} 
+            <Button
+              title="30 Days"
+              onPress={() => setDays(30)}
               disabled={loadingAd}
             />
           </View>
@@ -236,14 +262,14 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
             Choose summary type:
           </Text>
           <View style={{ flexDirection: "row", gap: 8 }}>
-            <Button 
-              title="Normal" 
-              onPress={() => setDetail("normal")} 
+            <Button
+              title="Normal"
+              onPress={() => setDetail("normal")}
               disabled={loadingAd}
             />
-            <Button 
-              title="Detailed" 
-              onPress={() => setDetail("detailed")} 
+            <Button
+              title="Detailed"
+              onPress={() => setDetail("detailed")}
               disabled={loadingAd}
             />
           </View>
@@ -259,20 +285,21 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
       ) : (
         <>
           <Text style={{ fontSize: 14, color: "#666", marginBottom: 12 }}>
-            Watch {getAdCount(days, detail)} ads ({days} days • {detail}) to unlock today's summary.
+            Watch {getAdCount(days, detail)} ads ({days} days • {detail}) to
+            unlock today's summary.
             {adsLeft > 0 && ` (${adsLeft} ads remaining)`}
           </Text>
           {loadingAd ? (
-            <View style={{ alignItems: 'center' }}>
+            <View style={{ alignItems: "center" }}>
               <ActivityIndicator size="small" color="#000" />
               <Text style={{ marginTop: 8, fontSize: 12 }}>
                 Watching ad {currentAdNumber} of {totalAdsRef.current}
               </Text>
             </View>
           ) : (
-            <Button 
-              title={`Unlock with ${getAdCount(days, detail)} Ads`} 
-              onPress={handleUnlock} 
+            <Button
+              title={`Unlock with ${getAdCount(days, detail)} Ads`}
+              onPress={handleUnlock}
             />
           )}
         </>
