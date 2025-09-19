@@ -186,7 +186,7 @@ export default function SummaryCard({ chats }: { chats: any[] }) {
       ${
         summaryDetail === "normal"
           ? "Write a short summary in 2-3 sentences highlighting key emotional insights."
-          : "Write a detailed, multi-paragraph analysis. Include emotional trends, coping strategies, recommendations, examples from the conversation, and actionable guidance. Each paragraph should be at least 4-5 sentences. Ensure the output is at least 400 words."
+          : "Write a very very detailed, multi-paragraph analysis. Include emotional trends, coping strategies, recommendations, examples from the conversation, and actionable guidance. Each paragraph should be at least 4-5 sentences. Ensure the output is at least 600 words."
       }
       
       Conversation:
