@@ -192,6 +192,8 @@ const Chat = () => {
 
       scrollToBottom();
 
+      playSound(require("@/assets/sounds/send.mp3"));
+
       Keyboard.dismiss();
     },
     [currentChatId, createTodayChat, sendMessage]
