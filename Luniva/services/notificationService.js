@@ -45,19 +45,20 @@ export async function scheduleDailyNotifications() {
   try {
     const today = getTodayDateString();
     const lastScheduled = await AsyncStorage.getItem("lastScheduledDate");
-
-    if (lastScheduled === today) return;
-
     const now = new Date();
-    const notificationIds = [];
 
-    // Main notifications at 10, 13, 16, 19
+    if (lastScheduled === today) {
+
+      await Notifications.cancelAllScheduledNotificationsAsync();
+    }
+
+    const notificationIds = [];
+    
     const times = [10, 13, 16, 19];
     for (const hour of times) {
       const notifTime = new Date();
       notifTime.setHours(hour, 0, 0, 0);
 
-      // Only schedule future notifications
       if (notifTime <= now) {
         notifTime.setDate(notifTime.getDate() + 1);
       }
@@ -69,12 +70,12 @@ export async function scheduleDailyNotifications() {
           body: selected,
           sound: "notification",
         },
-        trigger: { hour, minute: 0, repeats: true },
+        trigger: { date: notifTime, repeats: true },
       });
       notificationIds.push(id);
     }
 
-    // Streak notifications if user hasn't chatted
+
     const chatted = await hasChattedToday();
     if (!chatted) {
       const streakPick = getRandomNotifications(2, streakNotifications);
@@ -93,7 +94,7 @@ export async function scheduleDailyNotifications() {
             body: streakPick[i],
             sound: "notification",
           },
-          trigger: { hour: streakTimes[i], minute: 30, repeats: true },
+          trigger: { date: notifTime, repeats: true },
         });
         notificationIds.push(id);
       }
@@ -104,6 +105,9 @@ export async function scheduleDailyNotifications() {
       "scheduledNotifications",
       JSON.stringify(notificationIds)
     );
+    
+    console.log("Notifications scheduled successfully!");
+
   } catch (error) {
     console.error("Failed to schedule notifications:", error);
   }
